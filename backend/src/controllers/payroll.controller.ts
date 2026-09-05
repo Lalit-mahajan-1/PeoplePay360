@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { payrollService } from '../services/payroll.service';
+import { reportsService } from '../services/reports.service';
 import prisma from '../lib/prisma';
 
 // ========== PAYRUNS ==========
@@ -118,13 +119,9 @@ export const getPayslipsForPayrun = async (req: Request, res: Response): Promise
   } catch (e: any) { handleError(res, e, 'fetching payslips for payrun'); }
 };
 
-// ========== PRINT PAYSLIP ==========
 export const printPayslip = async (req: Request, res: Response): Promise<void> => {
   try {
-    const payslip = await payrollService.getPayslipById(req.params.id as string);
-    if (!payslip) { res.status(404).json({ success: false, message: 'Payslip not found' }); return; }
-
-    const html = generatePayslipHTML(payslip);
+    const html = await reportsService.generatePayslipHTML(req.params.id as string);
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
   } catch (e: any) { handleError(res, e, 'generating payslip'); }

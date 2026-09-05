@@ -14,6 +14,7 @@ import timeOffRoutes from './routes/time-off.routes';
 import salaryRoutes from './routes/salary.routes';
 import payrollRoutes from './routes/payroll.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import reportsRoutes from './routes/reports.routes';
 
 dotenv.config();
 
@@ -64,6 +65,7 @@ app.use('/api/time-off', timeOffRoutes);
 app.use('/api/salary', salaryRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // ── 404 Fallback ──
 app.use((_req, res) => {
