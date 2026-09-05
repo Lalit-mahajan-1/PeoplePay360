@@ -185,7 +185,28 @@ export class AttendanceService {
     });
 
     if (existing) {
-      throw { status: 409, message: 'You have already checked in today' };
+      if (!existing.checkOut) {
+        throw { status: 409, message: 'You are already checked in' };
+      }
+
+      // Re-check-in after previous checkout on the same day
+      const updated = await prisma.attendance.update({
+        where: { id: existing.id },
+        data: {
+          checkIn: now,
+          checkOut: null, // Clear checkOut to resume working session
+        },
+      });
+
+      await createAuditLog({
+        action: 'CHECK_IN',
+        module: 'ATTENDANCE',
+        recordId: updated.id,
+        details: `Employee re-checked in at ${now.toISOString()} (Resumed active session)`,
+        userId: authUser.userId,
+      });
+
+      return updated;
     }
 
     // Determine status (PRESENT vs LATE)
@@ -230,23 +251,32 @@ export class AttendanceService {
       throw { status: 400, message: 'No check-in found for today. Please check in first.' };
     }
     if (record.checkOut) {
-      throw { status: 409, message: 'You have already checked out today' };
+      throw { status: 409, message: 'You have already checked out today. Click Check In Again to start a new session.' };
     }
     if (!record.checkIn) {
       throw { status: 400, message: 'Check-in time is missing. Contact HR.' };
     }
 
-    const calculated = this.calculateHours(new Date(record.checkIn), now, schedule);
-    const { workedMinutes, overtimeMinutes } = calculated;
+    // Calculate session worked minutes and accumulate with previous worked minutes
+    const sessionMinutes = Math.max(0, diffMinutes(now, new Date(record.checkIn)));
+    const previousWorkedMinutes = Number(record.workedMinutes || 0);
+    const totalWorkedMinutes = previousWorkedMinutes + sessionMinutes;
+
+    const expectedMinutes = schedule.expectedMinutes || 480;
+    const overtimeMinutes = Math.max(0, totalWorkedMinutes - expectedMinutes);
 
     let status = record.status;
-    if (calculated.status) status = calculated.status as any;
+    if (totalWorkedMinutes >= expectedMinutes && status !== 'LATE') {
+      status = 'PRESENT';
+    } else if (totalWorkedMinutes > 0 && totalWorkedMinutes < expectedMinutes / 2) {
+      status = 'HALF_DAY';
+    }
 
     const updated = await prisma.attendance.update({
       where: { id: record.id },
       data: {
         checkOut: now,
-        workedMinutes,
+        workedMinutes: totalWorkedMinutes,
         overtimeMinutes,
         status,
       },
@@ -256,7 +286,7 @@ export class AttendanceService {
       action: 'CHECK_OUT',
       module: 'ATTENDANCE',
       recordId: updated.id,
-      details: `Employee checked out at ${now.toISOString()} — Worked: ${workedMinutes} min`,
+      details: `Employee checked out at ${now.toISOString()} — Worked: ${totalWorkedMinutes} min`,
       userId: authUser.userId,
     });
 

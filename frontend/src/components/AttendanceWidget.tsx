@@ -259,27 +259,43 @@ export default function AttendanceWidget({ onStatusChange }: AttendanceWidgetPro
               </button>
             </div>
           ) : isCheckedOut ? (
-            /* Checked out for today */
-            <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-4 space-y-3">
-              <div className="flex items-center gap-2 text-blue-800 font-bold text-sm">
-                <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
-                <span>Completed for Today</span>
+            /* Checked out for today (or previous session) */
+            <div className="space-y-4">
+              <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-blue-800 font-bold text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
+                    <span>Completed Checkout Session</span>
+                  </div>
+                  <span className="px-2.5 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">
+                    Checked Out
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-blue-200/60 text-xs text-blue-900">
+                  <div>
+                    <span className="text-blue-600 block text-[11px]">Last Check In</span>
+                    <span className="font-bold">{formatTime(record.checkIn)}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 block text-[11px]">Last Check Out</span>
+                    <span className="font-bold">{formatTime(record.checkOut)}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 block text-[11px]">Total Worked</span>
+                    <span className="font-bold">{formatDuration(record.workedMinutes)}</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-blue-200/60 text-xs text-blue-900">
-                <div>
-                  <span className="text-blue-600 block text-[11px]">Check In</span>
-                  <span className="font-bold">{formatTime(record.checkIn)}</span>
-                </div>
-                <div>
-                  <span className="text-blue-600 block text-[11px]">Check Out</span>
-                  <span className="font-bold">{formatTime(record.checkOut)}</span>
-                </div>
-                <div>
-                  <span className="text-blue-600 block text-[11px]">Total Worked</span>
-                  <span className="font-bold">{formatDuration(record.workedMinutes)}</span>
-                </div>
-              </div>
+              <button
+                onClick={handleCheckIn}
+                disabled={actionLoading}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-md shadow-emerald-500/20 transition disabled:opacity-50 cursor-pointer"
+              >
+                <LogIn className="w-5 h-5" />
+                {actionLoading ? 'Checking in...' : 'Check In Again'}
+              </button>
             </div>
           ) : null}
       </>
