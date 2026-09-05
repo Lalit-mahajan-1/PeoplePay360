@@ -8,6 +8,16 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ==================== ENUMS ====================
+
+enum UserRole {
+  EMPLOYEE
+  HR_MANAGER
+  HR_PAYROLL_USER
+  HR_PAYROLL_MANAGER
+  ADMIN
+}
+
 enum EmployeeStatus {
   ACTIVE
   INACTIVE
@@ -27,23 +37,50 @@ enum Gender {
   OTHER
 }
 
-enum AttendanceStatus {
-  PRESENT
-  LATE
-  ABSENT
-  HALF_DAY
-  ON_LEAVE
-  HOLIDAY
-  WEEKEND
+// ==================== AUTH ====================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      UserRole @default(EMPLOYEE)
+  isActive  Boolean  @default(true)
+
+  employeeId String?   @unique
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  auditLogs AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
 }
 
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  module     String
+  recordId   String?
+  details    String?
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// ==================== HR ====================
+
 model Department {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  code      String   @unique
-  parentId  String?
-  parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
-  children  Department[] @relation("DepartmentHierarchy")
+  id       String  @id @default(cuid())
+  name     String  @unique
+  code     String  @unique
+  parentId String?
+
+  parent   Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children Department[] @relation("DepartmentHierarchy")
 
   employees Employee[]
 
@@ -54,50 +91,43 @@ model Department {
 }
 
 model Employee {
-  id              String          @id @default(cuid())
-  employeeCode    String          @unique
-  firstName       String
-  lastName        String
-  email           String          @unique
-  phone           String?
-  dateOfBirth     DateTime?
-  gender          Gender?
-  
-  // Work info
-  departmentId    String?
-  department      Department?     @relation(fields: [departmentId], references: [id])
-  jobPosition     String?
-  jobTitle        String?
-  managerId       String?
-  manager         Employee?       @relation("ManagerSubordinates", fields: [managerId], references: [id])
-  subordinates    Employee[]      @relation("ManagerSubordinates")
-  
-  // Employment
-  hireDate        DateTime        @default(now())
-  status          EmployeeStatus  @default(ACTIVE)
-  employeeType    EmployeeType    @default(FULL_TIME)
-  
-  // Personal
-  address         String?
-  city            String?
-  state           String?
-  country         String?
-  postalCode      String?
-  
-  // Bank details
-  bankName        String?
-  bankAccountNo   String?
-  bankIFSC        String?
-  
-  // Profile
-  avatarUrl       String?
+  id            String         @id @default(cuid())
+  employeeCode  String         @unique
+  firstName     String
+  lastName      String
+  email         String         @unique
+  phone         String?
+  dateOfBirth   DateTime?
+  gender        Gender?
 
-  // Attendance
-  attendanceRecords     Attendance[] @relation("EmployeeAttendance")
-  attendanceCorrections Attendance[] @relation("AttendanceCorrectedBy")
-  
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  departmentId  String?
+  department    Department?    @relation(fields: [departmentId], references: [id])
+  jobPosition   String?
+  jobTitle      String?
+  managerId     String?
+  manager       Employee?      @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  subordinates  Employee[]     @relation("ManagerSubordinates")
+
+  hireDate      DateTime       @default(now())
+  status        EmployeeStatus @default(ACTIVE)
+  employeeType  EmployeeType   @default(FULL_TIME)
+
+  address    String?
+  city       String?
+  state      String?
+  country    String?
+  postalCode String?
+
+  bankName      String?
+  bankAccountNo String?
+  bankIFSC      String?
+
+  avatarUrl String?
+
+  user User?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("employees")
 }

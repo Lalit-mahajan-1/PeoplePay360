@@ -1,11 +1,12 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Create departments
+  // Departments
   const engineering = await prisma.department.upsert({
     where: { code: 'ENG' },
     update: {},
@@ -30,7 +31,7 @@ async function main() {
     create: { name: 'Marketing', code: 'MKT' },
   });
 
-  // Create employees
+  // Employees
   const emp1 = await prisma.employee.upsert({
     where: { employeeCode: 'EMP001' },
     update: {},
@@ -38,7 +39,7 @@ async function main() {
       employeeCode: 'EMP001',
       firstName: 'Rahul',
       lastName: 'Sharma',
-      email: 'rahul.sharma@peoplepay360.com',
+      email: 'rahul@peoplepay360.com',
       phone: '+91-9876543210',
       gender: 'MALE',
       departmentId: engineering.id,
@@ -56,14 +57,14 @@ async function main() {
     },
   });
 
-  const emp2 = await prisma.employee.upsert({
+  await prisma.employee.upsert({
     where: { employeeCode: 'EMP002' },
     update: {},
     create: {
       employeeCode: 'EMP002',
       firstName: 'Priya',
       lastName: 'Patel',
-      email: 'priya.patel@peoplepay360.com',
+      email: 'priya@peoplepay360.com',
       phone: '+91-9876543211',
       gender: 'FEMALE',
       departmentId: engineering.id,
@@ -74,7 +75,6 @@ async function main() {
       status: 'ACTIVE',
       employeeType: 'FULL_TIME',
       city: 'Bangalore',
-      state: 'Karnataka',
       country: 'India',
       bankName: 'ICICI Bank',
       bankAccountNo: '9876543210',
@@ -82,24 +82,21 @@ async function main() {
     },
   });
 
-  await prisma.employee.upsert({
+  const emp3 = await prisma.employee.upsert({
     where: { employeeCode: 'EMP003' },
     update: {},
     create: {
       employeeCode: 'EMP003',
       firstName: 'Amit',
       lastName: 'Kumar',
-      email: 'amit.kumar@peoplepay360.com',
-      phone: '+91-9876543212',
+      email: 'amit@peoplepay360.com',
       gender: 'MALE',
       departmentId: hr.id,
       jobPosition: 'HR Manager',
-      jobTitle: 'Senior HR Manager',
       hireDate: new Date('2021-06-10'),
       status: 'ACTIVE',
       employeeType: 'FULL_TIME',
       city: 'Mumbai',
-      state: 'Maharashtra',
       country: 'India',
       bankName: 'SBI',
       bankAccountNo: '5555666677',
@@ -114,16 +111,14 @@ async function main() {
       employeeCode: 'EMP004',
       firstName: 'Sneha',
       lastName: 'Reddy',
-      email: 'sneha.reddy@peoplepay360.com',
+      email: 'sneha@peoplepay360.com',
       gender: 'FEMALE',
       departmentId: finance.id,
       jobPosition: 'Finance Analyst',
-      jobTitle: 'Senior Analyst',
       hireDate: new Date('2023-08-20'),
       status: 'ACTIVE',
       employeeType: 'FULL_TIME',
       city: 'Hyderabad',
-      state: 'Telangana',
       country: 'India',
     },
   });
@@ -135,22 +130,61 @@ async function main() {
       employeeCode: 'EMP005',
       firstName: 'Vikram',
       lastName: 'Singh',
-      email: 'vikram.singh@peoplepay360.com',
+      email: 'vikram@peoplepay360.com',
       gender: 'MALE',
       departmentId: marketing.id,
       jobPosition: 'Marketing Intern',
-      jobTitle: 'Digital Marketing Intern',
-      managerId: emp1.id,
       hireDate: new Date('2024-11-01'),
       status: 'ACTIVE',
       employeeType: 'INTERN',
       city: 'Delhi',
-      state: 'Delhi',
       country: 'India',
     },
   });
 
-  console.log('✅ Seed completed successfully!');
+  // Users
+  const adminPassword = await bcrypt.hash('admin123', 12);
+  const hrPassword = await bcrypt.hash('hr123456', 12);
+  const empPassword = await bcrypt.hash('emp12345', 12);
+
+  await prisma.user.upsert({
+    where: { email: 'admin@peoplepay360.com' },
+    update: {},
+    create: {
+      email: 'admin@peoplepay360.com',
+      password: adminPassword,
+      role: 'ADMIN',
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'amit@peoplepay360.com' },
+    update: {},
+    create: {
+      email: 'amit@peoplepay360.com',
+      password: hrPassword,
+      role: 'HR_MANAGER',
+      employeeId: emp3.id,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'rahul@peoplepay360.com' },
+    update: {},
+    create: {
+      email: 'rahul@peoplepay360.com',
+      password: empPassword,
+      role: 'EMPLOYEE',
+      employeeId: emp1.id,
+    },
+  });
+
+  console.log('✅ Seed completed!');
+  console.log('');
+  console.log('📧 Login Credentials:');
+  console.log('   Admin:      admin@peoplepay360.com / admin123');
+  console.log('   HR Manager: amit@peoplepay360.com  / hr123456');
+  console.log('   Employee:   rahul@peoplepay360.com / emp12345');
 }
 
 main()
