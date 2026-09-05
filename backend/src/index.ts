@@ -57,5 +57,4 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 // ── Start Server ──
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📋 Environment: ${process.env.NODE_ENV}`);
 });

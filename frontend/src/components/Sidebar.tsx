@@ -230,7 +230,7 @@ export default function Sidebar() {
 
             {/* Nav with Section Headers */}
             <nav
-                className={`flex-1 bg-[#f9f5f2] border-t border-amber-600/40 min-h-0 px-2.5 py-4 space-y-1 ${
+                className={`flex-1 min-h-0 px-2.5 py-3 space-y-4 ${
                     collapsed ? "overflow-hidden" : "overflow-y-auto"
                 }`}
             >
@@ -252,37 +252,40 @@ export default function Sidebar() {
                                 const active = location.pathname === item.path;
                                 const Icon = item.icon;
 
-                    return (
-                        <Link
-                            key={item.path}
-                            to={item.path}
-                            onClick={onNavigate}
-                            title={collapsed ? item.label : undefined}
-                            className={`group relative flex items-center gap-3 rounded-[12px] text-[13.5px] font-medium tracking-[-0.005em] transition-all duration-150 ease-out active:scale-[0.97] ${
-                                collapsed
-                                    ? "justify-center px-0 py-2.5"
-                                    : "px-3 py-2.5"
-                            } ${
-                                active
-                                    ? "bg-blue-600/10 text-blue-600"
-                                    : "text-gray-600 cursor-pointer hover:text-gray-900 cursor-pointer hover:bg-black/[0.04]"
-                            }`}
-                        >
-                            <Icon
-                                className="w-[18px] h-[18px] shrink-0"
-                                strokeWidth={2}
-                            />
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        onClick={onNavigate}
+                                        title={collapsed ? item.label : undefined}
+                                        className={`group relative flex items-center gap-3 rounded-[12px] text-[13.5px] font-medium tracking-[-0.005em] transition-all duration-150 active:scale-[0.97] ${
+                                            collapsed
+                                                ? "justify-center px-0 py-2.5"
+                                                : "px-3 py-2.5"
+                                        } ${
+                                            active
+                                                ? "bg-blue-600/10 text-blue-600 font-semibold"
+                                                : "text-gray-600 cursor-pointer hover:text-gray-900 hover:bg-black/[0.04]"
+                                        }`}
+                                    >
+                                        <Icon
+                                            className="w-[18px] h-[18px] shrink-0"
+                                            strokeWidth={2}
+                                        />
 
                                         {!collapsed && (
                                             <span className="truncate">{item.label}</span>
                                         )}
 
-                            {collapsed && (
-                                <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-[12px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-cursor-pointer hover:opacity-100 z-50">
-                                    {item.label}
-                                </span>
-                            )}
-                        </Link>
+                                        {collapsed && (
+                                            <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-[12px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 z-50">
+                                                {item.label}
+                                            </span>
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
                     );
                 })}
             </nav>

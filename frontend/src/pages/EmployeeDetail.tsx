@@ -65,7 +65,7 @@ function getAvatarStyle(id: string) {
 }
 
 // Apple design: Critically damped default spring (no overshoot)
-const appleSpring = { type: "spring", bounce: 0, duration: 0.4 };
+const appleSpring = { type: "spring" as const, bounce: 0, duration: 0.4 };
 
 // Removed CSS transitions for layout changes; relying on springs for interruptibility
 const fieldClass =
