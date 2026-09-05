@@ -148,27 +148,20 @@ export class TimeOffService {
     const map = new Map<string, any>();
     for (const a of rawAllocs) {
       const typeId = a.timeOffTypeId;
+      if (map.has(typeId)) continue; // Keep the latest active allocation per type
+
       const allocated = Number(a.allocated || 0);
       const consumed = Number(a.consumed || 0);
       const pending = a.requests.filter(r => r.status === 'PENDING').reduce((s, r) => s + Number(r.requestedUnit), 0);
 
-      if (map.has(typeId)) {
-        const item = map.get(typeId);
-        item.allocated += allocated;
-        item.consumed += consumed;
-        item.taken += consumed;
-        item.pending += pending;
-        item.remaining = Math.max(0, item.allocated - item.consumed);
-      } else {
-        map.set(typeId, {
-          ...a,
-          allocated,
-          consumed,
-          taken: consumed,
-          pending,
-          remaining: Math.max(0, allocated - consumed),
-        });
-      }
+      map.set(typeId, {
+        ...a,
+        allocated,
+        consumed,
+        taken: consumed,
+        pending,
+        remaining: Math.max(0, allocated - consumed),
+      });
     }
 
     return Array.from(map.values());
