@@ -14,11 +14,11 @@ const ALL_WITH_EMP = ['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_USER', 'HR_PAYROLL_M
 
 router.use(authenticate);
 
-// Structures are readable and editable by all payroll users; delete restricted to managers
+// Structures are readable by all payroll users; editable only by managers
 router.get('/structures', authorize(ALL_WITH_EMP), getAllSalaryStructures);
 router.get('/structures/:id', authorize(ALL_WITH_EMP), getSalaryStructureById);
-router.post('/structures', authorize(ALL_PAYROLL), createSalaryStructure);
-router.put('/structures/:id', authorize(ALL_PAYROLL), updateSalaryStructure);
+router.post('/structures', authorize(PAYROLL_MANAGER), createSalaryStructure);
+router.put('/structures/:id', authorize(PAYROLL_MANAGER), updateSalaryStructure);
 router.delete('/structures/:id', authorize(PAYROLL_MANAGER), deleteSalaryStructure);
 
 // Rules: Readable and editable by all payroll users; delete restricted to managers

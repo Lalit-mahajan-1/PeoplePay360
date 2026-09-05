@@ -39,7 +39,7 @@ interface SalaryStructure {
 
 export default function SalaryStructures() {
     const { hasRole } = useAuth();
-    const canDelete = hasRole(['ADMIN', 'HR_PAYROLL_MANAGER']);
+    const canManageStructure = hasRole(['ADMIN', 'HR_PAYROLL_MANAGER']);
     const [structures, setStructures] = useState<SalaryStructure[]>([]);
     const [availableRules, setAvailableRules] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -213,12 +213,14 @@ export default function SalaryStructures() {
                     </p>
                 </div>
 
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md shadow-blue-600/20 transition cursor-pointer"
-                >
-                    <Plus className="w-4 h-4" /> New Salary Structure
-                </button>
+                {canManageStructure && (
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md shadow-blue-600/20 transition cursor-pointer"
+                    >
+                        <Plus className="w-4 h-4" /> New Salary Structure
+                    </button>
+                )}
             </div>
 
             {/* Filter Bar */}
@@ -314,27 +316,29 @@ export default function SalaryStructures() {
 
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-1">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleOpenModal(struct);
-                                                            }}
-                                                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                                                            title="Edit Structure"
-                                                        >
-                                                            <Edit2 className="w-4 h-4" />
-                                                        </button>
-                                                        {canDelete && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDelete(struct.id, struct.name);
-                                                                }}
-                                                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
-                                                                title="Delete Structure"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
+                                                        {canManageStructure && (
+                                                            <>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleOpenModal(struct);
+                                                                    }}
+                                                                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                                                                    title="Edit Structure"
+                                                                >
+                                                                    <Edit2 className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDelete(struct.id, struct.name);
+                                                                    }}
+                                                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                                                                    title="Delete Structure"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </>
                                                         )}
                                                     </div>
                                                 </td>
