@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
+import { Trash2 } from "lucide-react";
 import EmployeeFormModal from "./EmployeeFormModal";
 
 interface Employee {
@@ -15,6 +16,11 @@ interface Employee {
     gender?: string;
     avatarUrl?: string;
     jobProfile?: string;
+
+    user?: {
+        id: string;
+        role: string;
+    };
 
     manager?: {
         id: string;
@@ -125,7 +131,7 @@ function EmployeeAvatar({
 }
 
 export default function EmployeeList() {
-    const { hasRole } = useAuth();
+    const { user: currentUser, hasRole } = useAuth();
     const navigate = useNavigate();
 
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -143,6 +149,20 @@ export default function EmployeeList() {
     ]);
 
     const openEmployee = (emp: Employee) => navigate(`/employees/${emp.id}`);
+
+    const handleSoftDelete = async (e: React.MouseEvent, emp: Employee) => {
+        e.stopPropagation();
+        if (!confirm(`Are you sure you want to soft delete (archive) ${emp.firstName} ${emp.lastName}?`)) {
+            return;
+        }
+        try {
+            await api.delete(`/employees/${emp.id}`);
+            toast.success(`Employee ${emp.firstName} ${emp.lastName} soft-deleted successfully.`);
+            fetchEmployees();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to soft delete employee");
+        }
+    };
 
     const fetchEmployees = async () => {
         try {
@@ -514,6 +534,10 @@ export default function EmployeeList() {
                                 <th className="px-4 py-3 text-left font-semibold tracking-[0.01em] text-gray-500">
                                     Hire Date
                                 </th>
+
+                                <th className="px-4 py-3 text-right font-semibold tracking-[0.01em] text-gray-500">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
 
@@ -588,6 +612,61 @@ export default function EmployeeList() {
                                                 year: "numeric",
                                             })}
                                         </td>
+
+                                        {/* Actions (Soft delete only for standard EMPLOYEE role when HR is logged in, or ADMIN) */}
+                                        <td
+                                            className="px-4 py-3 text-right"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {(() => {
+                                                const targetRole =
+                                                    emp.user?.role || "EMPLOYEE";
+                                                const isTargetStandardEmployee =
+                                                    targetRole === "EMPLOYEE";
+                                                const isAdmin =
+                                                    currentUser?.role === "ADMIN";
+                                                const canDeleteThisEmp =
+                                                    isAdmin ||
+                                                    isTargetStandardEmployee;
+
+                                                if (
+                                                    canDeleteThisEmp &&
+                                                    emp.status !== "ARCHIVED"
+                                                ) {
+                                                    return (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) =>
+                                                                handleSoftDelete(
+                                                                    e,
+                                                                    emp,
+                                                                )
+                                                            }
+                                                            className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 shadow-xs transition hover:bg-red-100 hover:text-red-700 cursor-pointer"
+                                                            title="Soft Delete / Archive Employee"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                            Soft Delete
+                                                        </button>
+                                                    );
+                                                }
+                                                if (
+                                                    !isTargetStandardEmployee &&
+                                                    !isAdmin
+                                                ) {
+                                                    return (
+                                                        <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-500 border border-slate-200">
+                                                            Protected ({targetRole})
+                                                        </span>
+                                                    );
+                                                }
+                                                return (
+                                                    <span className="text-[11px] text-gray-400">
+                                                        —
+                                                    </span>
+                                                );
+                                            })()}
+                                        </td>
                                     </tr>
                                 );
                             })}
@@ -657,14 +736,61 @@ export default function EmployeeList() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center justify-end gap-2">
-                                                <span className="shrink-0 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[11px] text-indigo-600">
+                                            <div className="flex items-center justify-between gap-2 pt-2 border-t border-black/[0.04]">
+                                                <span className="shrink-0 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[11px] text-indigo-600 font-medium">
                                                     {
                                                         typeLabels[
                                                             emp.employeeType
                                                         ]
                                                     }
                                                 </span>
+
+                                                {(() => {
+                                                    const targetRole =
+                                                        emp.user?.role ||
+                                                        "EMPLOYEE";
+                                                    const isTargetStandardEmployee =
+                                                        targetRole === "EMPLOYEE";
+                                                    const isAdmin =
+                                                        currentUser?.role ===
+                                                        "ADMIN";
+                                                    const canDeleteThisEmp =
+                                                        isAdmin ||
+                                                        isTargetStandardEmployee;
+
+                                                    if (
+                                                        canDeleteThisEmp &&
+                                                        emp.status !== "ARCHIVED"
+                                                    ) {
+                                                        return (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) =>
+                                                                    handleSoftDelete(
+                                                                        e,
+                                                                        emp,
+                                                                    )
+                                                                }
+                                                                className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-red-100 transition cursor-pointer"
+                                                                title="Soft Delete / Archive Employee"
+                                                            >
+                                                                <Trash2 className="h-3 w-3" />
+                                                                Soft Delete
+                                                            </button>
+                                                        );
+                                                    }
+                                                    if (
+                                                        !isTargetStandardEmployee &&
+                                                        !isAdmin
+                                                    ) {
+                                                        return (
+                                                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                                                                Protected
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
                                             </div>
                                         </div>
                                     ))}

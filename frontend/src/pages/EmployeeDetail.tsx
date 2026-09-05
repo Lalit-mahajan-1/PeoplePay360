@@ -27,6 +27,10 @@ interface Employee {
     phone?: string;
     gender?: string;
     avatarUrl?: string;
+    user?: {
+        id: string;
+        role: string;
+    };
     department?: Department;
     departmentId?: string;
     jobPosition?: string;
@@ -123,18 +127,24 @@ function EmployeeAvatar({ employee }: { employee: Employee }) {
 export default function EmployeeDetail() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { hasRole } = useAuth();
-
-    const canEdit = hasRole([
-        "ADMIN",
-        "HR_MANAGER",
-        "HR_PAYROLL_USER",
-        "HR_PAYROLL_MANAGER",
-    ]);
-
-    const canDelete = hasRole(["ADMIN", "HR_PAYROLL_MANAGER"]);
+    const { user: currentUser, hasRole } = useAuth();
 
     const [employee, setEmployee] = useState<Employee | null>(null);
+
+    const isTargetStandardEmployee = (employee?.user?.role || "EMPLOYEE") === "EMPLOYEE";
+    const isAdmin = currentUser?.role === "ADMIN";
+
+    const canEdit =
+        hasRole([
+            "ADMIN",
+            "HR_MANAGER",
+            "HR_PAYROLL_USER",
+            "HR_PAYROLL_MANAGER",
+        ]) && (isAdmin || isTargetStandardEmployee);
+
+    const canDelete =
+        hasRole(["ADMIN", "HR_MANAGER", "HR_PAYROLL_MANAGER"]) &&
+        (isAdmin || isTargetStandardEmployee);
     const [departments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);

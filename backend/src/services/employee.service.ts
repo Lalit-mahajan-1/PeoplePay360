@@ -55,6 +55,7 @@ export class EmployeeService {
     const employees = await prisma.employee.findMany({
       where,
       include: {
+        user: { select: { id: true, role: true } },
         manager: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
@@ -69,6 +70,7 @@ export class EmployeeService {
     const employee = await prisma.employee.findUnique({
       where: { id },
       include: {
+        user: { select: { id: true, role: true } },
         manager: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
@@ -140,6 +142,7 @@ export class EmployeeService {
         avatarUrl: data.avatarUrl,
       },
       include: {
+        user: { select: { id: true, role: true } },
         manager: {
           select: { id: true, firstName: true, lastName: true },
         },
@@ -158,9 +161,17 @@ export class EmployeeService {
   }
 
   async update(id: string, data: any, authUser: AuthUser) {
-    const existing = await prisma.employee.findUnique({ where: { id } });
+    const existing = await prisma.employee.findUnique({
+      where: { id },
+      include: { user: { select: { role: true } } },
+    });
     if (!existing) {
       throw { status: 404, message: 'Employee not found' };
+    }
+
+    // Role-scoping: HR Manager can only edit users with 'EMPLOYEE' role
+    if (authUser.role !== 'ADMIN' && existing.user?.role && existing.user.role !== 'EMPLOYEE') {
+      throw { status: 403, message: 'HR Managers can only modify standard employees with the EMPLOYEE role.' };
     }
 
     // Check email uniqueness if changing
@@ -185,6 +196,7 @@ export class EmployeeService {
       where: { id },
       data: updateData,
       include: {
+        user: { select: { id: true, role: true } },
         manager: {
           select: { id: true, firstName: true, lastName: true },
         },
@@ -203,9 +215,17 @@ export class EmployeeService {
   }
 
   async delete(id: string, authUser: AuthUser) {
-    const existing = await prisma.employee.findUnique({ where: { id } });
+    const existing = await prisma.employee.findUnique({
+      where: { id },
+      include: { user: { select: { role: true } } },
+    });
     if (!existing) {
       throw { status: 404, message: 'Employee not found' };
+    }
+
+    // Role-scoping: HR Manager can only soft-delete users with 'EMPLOYEE' role
+    if (authUser.role !== 'ADMIN' && existing.user?.role && existing.user.role !== 'EMPLOYEE') {
+      throw { status: 403, message: 'HR Managers can only soft-delete standard employees with the EMPLOYEE role.' };
     }
 
     await prisma.employee.update({

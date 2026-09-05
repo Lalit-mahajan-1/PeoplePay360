@@ -98,7 +98,7 @@ router.put(
 
 router.delete(
   '/:id',
-  authorize(['ADMIN']),
+  authorize(['ADMIN', 'HR_MANAGER', 'HR_PAYROLL_MANAGER']),
   deleteEmployee
 );
 
