@@ -4,6 +4,7 @@ import { Construction } from "lucide-react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Users from "./pages/Users";
 import Sidebar from "./components/Sidebar";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -75,6 +76,14 @@ function AppRoutes() {
                 element={
                     <PrivateRoute>
                         <Dashboard />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/users"
+                element={
+                    <PrivateRoute>
+                        <Users />
                     </PrivateRoute>
                 }
             />

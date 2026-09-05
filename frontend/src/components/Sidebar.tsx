@@ -12,9 +12,10 @@ import {
     ChevronRight,
     Menu,
     X,
+    Building2,
+    LogOut,
+    ShieldCheck,
 } from "lucide-react";
-import { HiOutlineBuildingOffice2 } from "react-icons/hi2";
-import { FiLogOut } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
 const roleColors: Record<string, string> = {
@@ -39,6 +40,12 @@ const navItems = [
         path: "/",
         icon: Users,
         roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
+    },
+    {
+        label: "Users",
+        path: "/users",
+        icon: ShieldCheck,
+        roles: ["ADMIN"],
     },
     {
         label: "Contracts",
@@ -253,7 +260,7 @@ export default function Sidebar() {
                             : "w-full px-3 py-2 mt-1"
                     }`}
                 >
-                    <FiLogOut className="w-4 h-4 shrink-0" />
+                    <LogOut className="w-4 h-4 shrink-0" />
                     {!collapsed && <span>Log out</span>}
                 </button>
             </div>
@@ -271,7 +278,7 @@ export default function Sidebar() {
                     <Menu className="w-5 h-5" />
                 </button>
                 <div className="w-7 h-7 bg-blue-600 rounded-[9px] flex items-center justify-center">
-                    <HiOutlineBuildingOffice2 className="w-4 h-4 text-white" />
+                    <Building2 className="w-4 h-4 text-white" />
                 </div>
                 <span className="text-[15px] font-semibold text-gray-900 tracking-[-0.01em]">
                     PeoplePay360
