@@ -14,18 +14,18 @@ const ALL_WITH_EMP = ['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_USER', 'HR_PAYROLL_M
 
 router.use(authenticate);
 
-// Structures are readable by all payroll users; editable only by managers
+// Structures are readable and editable by all payroll users; delete restricted to managers
 router.get('/structures', authorize(ALL_WITH_EMP), getAllSalaryStructures);
 router.get('/structures/:id', authorize(ALL_WITH_EMP), getSalaryStructureById);
-router.post('/structures', authorize(PAYROLL_MANAGER), createSalaryStructure);
-router.put('/structures/:id', authorize(PAYROLL_MANAGER), updateSalaryStructure);
+router.post('/structures', authorize(ALL_PAYROLL), createSalaryStructure);
+router.put('/structures/:id', authorize(ALL_PAYROLL), updateSalaryStructure);
 router.delete('/structures/:id', authorize(PAYROLL_MANAGER), deleteSalaryStructure);
 
-// Rules: Payroll users can read, managers write
+// Rules: Readable and editable by all payroll users; delete restricted to managers
 router.get('/rules', authorize(ALL_PAYROLL.concat('HR_MANAGER', 'EMPLOYEE')), getAllSalaryRules);
 router.get('/rules/:id', authorize(ALL_PAYROLL.concat('HR_MANAGER')), getSalaryRuleById);
-router.post('/rules', authorize(PAYROLL_MANAGER), createSalaryRule);
-router.put('/rules/:id', authorize(PAYROLL_MANAGER), updateSalaryRule);
+router.post('/rules', authorize(ALL_PAYROLL), createSalaryRule);
+router.put('/rules/:id', authorize(ALL_PAYROLL), updateSalaryRule);
 router.delete('/rules/:id', authorize(PAYROLL_MANAGER), deleteSalaryRule);
 
 export default router;
