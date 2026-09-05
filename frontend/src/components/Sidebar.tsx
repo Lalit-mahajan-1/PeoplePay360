@@ -12,7 +12,6 @@ import {
     ChevronRight,
     Menu,
     X,
-    Users,
     FileText,
     BarChart3,
     ShieldCheck,
@@ -136,12 +135,6 @@ export default function Sidebar() {
         navSections.push({
             title: "HR ADMINISTRATION",
             items: [
-                {
-                    label: "Employees",
-                    path: "/admin/employees",
-                    icon: Users,
-                    roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
-                },
                 {
                     label: "Contracts",
                     path: "/contracts",
