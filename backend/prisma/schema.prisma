@@ -27,6 +27,16 @@ enum Gender {
   OTHER
 }
 
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  HALF_DAY
+  ON_LEAVE
+  HOLIDAY
+  WEEKEND
+}
+
 model Department {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -81,9 +91,38 @@ model Employee {
   
   // Profile
   avatarUrl       String?
+
+  // Attendance
+  attendanceRecords     Attendance[] @relation("EmployeeAttendance")
+  attendanceCorrections Attendance[] @relation("AttendanceCorrectedBy")
   
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
   @@map("employees")
+}
+
+model Attendance {
+  id           String           @id @default(cuid())
+  employeeId   String           @map("employee_id")
+  workDate     DateTime         @db.Date @map("work_date")
+  checkIn      DateTime?        @map("check_in")
+  checkOut     DateTime?        @map("check_out")
+  workedMinutes Int              @default(0) @map("worked_minutes")
+  overtimeMinutes Int            @default(0) @map("overtime_minutes")
+  status       AttendanceStatus @default(PRESENT)
+  isManualEdit Boolean          @default(false) @map("is_manual_edit")
+  correctedById String?         @map("corrected_by")
+  correctedAt  DateTime?        @map("corrected_at")
+  notes        String?
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  employee    Employee  @relation("EmployeeAttendance", fields: [employeeId], references: [id])
+  correctedBy Employee? @relation("AttendanceCorrectedBy", fields: [correctedById], references: [id])
+
+  @@unique([employeeId, workDate])
+  @@index([workDate])
+  @@index([correctedById])
+  @@map("attendance")
 }
