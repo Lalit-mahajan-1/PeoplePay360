@@ -140,6 +140,8 @@ export default function EmployeeList() {
     const [statusFilter, setStatusFilter] = useState("");
     const [view, setView] = useState<"list" | "kanban">("list");
     const [showModal, setShowModal] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     const canCreate = hasRole([
         "ADMIN",
@@ -150,17 +152,18 @@ export default function EmployeeList() {
 
     const openEmployee = (emp: Employee) => navigate(`/employees/${emp.id}`);
 
-    const handleSoftDelete = async (e: React.MouseEvent, emp: Employee) => {
-        e.stopPropagation();
-        if (!confirm(`Are you sure you want to soft delete (archive) ${emp.firstName} ${emp.lastName}?`)) {
-            return;
-        }
+    const confirmDelete = async () => {
+        if (!deleteTarget) return;
+        setDeleting(true);
         try {
-            await api.delete(`/employees/${emp.id}`);
-            toast.success(`Employee ${emp.firstName} ${emp.lastName} soft-deleted successfully.`);
+            await api.delete(`/employees/${deleteTarget.id}`);
+            toast.success(`Employee ${deleteTarget.firstName} ${deleteTarget.lastName} deleted successfully`);
+            setDeleteTarget(null);
             fetchEmployees();
         } catch (err: any) {
-            toast.error(err.response?.data?.message || "Failed to soft delete employee");
+            toast.error(err.response?.data?.message || "Failed to delete employee");
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -613,7 +616,7 @@ export default function EmployeeList() {
                                             })}
                                         </td>
 
-                                        {/* Actions (Soft delete only for standard EMPLOYEE role when HR is logged in, or ADMIN) */}
+                                        {/* Actions (Delete button exclusively for standard EMPLOYEE role when HR/Admin is logged in, blank for others) */}
                                         <td
                                             className="px-4 py-3 text-right"
                                             onClick={(e) => e.stopPropagation()}
@@ -626,7 +629,7 @@ export default function EmployeeList() {
                                                 const isAdmin =
                                                     currentUser?.role === "ADMIN";
                                                 const canDeleteThisEmp =
-                                                    isAdmin ||
+                                                    (isAdmin || isTargetStandardEmployee) &&
                                                     isTargetStandardEmployee;
 
                                                 if (
@@ -636,35 +639,20 @@ export default function EmployeeList() {
                                                     return (
                                                         <button
                                                             type="button"
-                                                            onClick={(e) =>
-                                                                handleSoftDelete(
-                                                                    e,
-                                                                    emp,
-                                                                )
-                                                            }
-                                                            className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 shadow-xs transition hover:bg-red-100 hover:text-red-700 cursor-pointer"
-                                                            title="Soft Delete / Archive Employee"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setDeleteTarget(emp);
+                                                            }}
+                                                            className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50/80 px-2.5 py-1 text-[11px] font-semibold text-red-600 shadow-2xs transition hover:bg-red-600 hover:text-white cursor-pointer"
+                                                            title="Delete Employee"
                                                         >
                                                             <Trash2 className="h-3.5 w-3.5" />
-                                                            Soft Delete
+                                                            Delete
                                                         </button>
                                                     );
                                                 }
-                                                if (
-                                                    !isTargetStandardEmployee &&
-                                                    !isAdmin
-                                                ) {
-                                                    return (
-                                                        <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-500 border border-slate-200">
-                                                            Protected ({targetRole})
-                                                        </span>
-                                                    );
-                                                }
-                                                return (
-                                                    <span className="text-[11px] text-gray-400">
-                                                        —
-                                                    </span>
-                                                );
+                                                // Keep column completely blank for non-employee roles
+                                                return null;
                                             })()}
                                         </td>
                                     </tr>
@@ -755,7 +743,7 @@ export default function EmployeeList() {
                                                         currentUser?.role ===
                                                         "ADMIN";
                                                     const canDeleteThisEmp =
-                                                        isAdmin ||
+                                                        (isAdmin || isTargetStandardEmployee) &&
                                                         isTargetStandardEmployee;
 
                                                     if (
@@ -765,30 +753,19 @@ export default function EmployeeList() {
                                                         return (
                                                             <button
                                                                 type="button"
-                                                                onClick={(e) =>
-                                                                    handleSoftDelete(
-                                                                        e,
-                                                                        emp,
-                                                                    )
-                                                                }
-                                                                className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-red-100 transition cursor-pointer"
-                                                                title="Soft Delete / Archive Employee"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setDeleteTarget(emp);
+                                                                }}
+                                                                className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-red-600 hover:text-white transition cursor-pointer"
+                                                                title="Delete Employee"
                                                             >
                                                                 <Trash2 className="h-3 w-3" />
-                                                                Soft Delete
+                                                                Delete
                                                             </button>
                                                         );
                                                     }
-                                                    if (
-                                                        !isTargetStandardEmployee &&
-                                                        !isAdmin
-                                                    ) {
-                                                        return (
-                                                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                                                                Protected
-                                                            </span>
-                                                        );
-                                                    }
+                                                    // Keep blank for all non-employee roles
                                                     return null;
                                                 })()}
                                             </div>
@@ -804,6 +781,64 @@ export default function EmployeeList() {
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {/* ============================================================
+                DELETE CONFIRMATION MODAL CARD
+            ============================================================ */}
+            {deleteTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 space-y-5 animate-in zoom-in-95 duration-150">
+                        {/* Header */}
+                        <div className="flex items-start gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+                                <Trash2 className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900">
+                                    Delete Employee Record
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    Are you sure you want to delete this employee? This will archive their account.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Employee Preview Card */}
+                        <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
+                            <EmployeeAvatar employee={deleteTarget} size="small" />
+                            <div className="min-w-0">
+                                <p className="font-semibold text-slate-900 text-sm truncate">
+                                    {deleteTarget.firstName} {deleteTarget.lastName}
+                                </p>
+                                <p className="text-xs text-slate-500 truncate">
+                                    {deleteTarget.email} • Code: <span className="font-mono font-semibold text-slate-700">{deleteTarget.employeeCode}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Modal Action Buttons */}
+                        <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={deleting}
+                                className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDelete}
+                                disabled={deleting}
+                                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-xs font-semibold text-white shadow-md shadow-red-500/20 hover:bg-red-700 active:scale-[0.98] transition cursor-pointer disabled:opacity-50"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                {deleting ? "Deleting..." : "Delete Employee"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
