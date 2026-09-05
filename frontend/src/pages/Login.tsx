@@ -26,15 +26,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f5f5f7] to-white flex items-center justify-center p-4 [font-family:-apple-system,BlinkMacSystemFont,'SF_Pro_Text','Inter',sans-serif]">
+    <div className="min-h-screen bg-[#f7f2ee] flex items-center justify-center p-4 [font-family:-apple-system,BlinkMacSystemFont,'SF_Pro_Text','Inter',sans-serif]">
       <div className="w-full max-w-[420px]">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-[20px] mb-5 shadow-[0_2px_4px_rgba(0,0,0,0.06),0_12px_24px_rgba(37,99,235,0.28)]">
-            <span className="text-3xl leading-none">💼</span>
+          <div className="inline-flex items-center justify-center ">
+            <span className="text-3xl leading-none"></span>
           </div>
           <h1 className="text-[28px] font-semibold text-gray-900 tracking-[-0.02em] leading-tight">
-            PeoplePay360
+            <img src="/logo-name.png"  alt="" />
           </h1>
           <p className="text-[15px] text-gray-500 mt-1 tracking-[-0.005em]">HR &amp; Payroll Platform</p>
         </div>

@@ -2,18 +2,22 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-    Users,
-    FileText,
+    LayoutDashboard,
+    User,
     Clock,
     CalendarDays,
     Wallet,
-    BarChart3,
+    Building2,
+    Settings,
     ChevronLeft,
     ChevronRight,
     Menu,
     X,
+    Users,
+    FileText,
+    BarChart3,
+    ShieldCheck,
 } from "lucide-react";
-import { HiOutlineBuildingOffice2 } from "react-icons/hi2";
 import { FiLogOut } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
@@ -33,63 +37,21 @@ const roleLabels: Record<string, string> = {
     EMPLOYEE: "Employee",
 };
 
-const navItems = [
-    {
-        label: "Employees",
-        path: "/",
-        icon: Users,
-        roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
-    },
-    {
-        label: "Contracts",
-        path: "/contracts",
-        icon: FileText,
-        roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
-    },
-    {
-        label: "Attendance",
-        path: "/attendance",
-        icon: Clock,
-        roles: [
-            "ADMIN",
-            "HR_MANAGER",
-            "HR_PAYROLL_USER",
-            "HR_PAYROLL_MANAGER",
-            "EMPLOYEE",
-        ],
-    },
-    {
-        label: "Time Off",
-        path: "/time-off",
-        icon: CalendarDays,
-        roles: [
-            "ADMIN",
-            "HR_MANAGER",
-            "HR_PAYROLL_USER",
-            "HR_PAYROLL_MANAGER",
-            "EMPLOYEE",
-        ],
-    },
-    {
-        label: "Payroll",
-        path: "/payroll",
-        icon: Wallet,
-        roles: ["ADMIN", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
-    },
-    {
-        label: "Reports",
-        path: "/reports",
-        icon: BarChart3,
-        roles: ["ADMIN", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
-    },
-];
+interface NavSection {
+    title: string;
+    items: {
+        label: string;
+        path: string;
+        icon: any;
+        roles?: string[];
+    }[];
+}
 
 export default function Sidebar() {
     const { user, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Desktop collapse state, persisted across reloads.
     const [collapsed, setCollapsed] = useState(() => {
         try {
             return localStorage.getItem("sidebar-collapsed") === "1";
@@ -97,25 +59,18 @@ export default function Sidebar() {
             return false;
         }
     });
-    // Mobile off-canvas state.
+
     const [mobileOpen, setMobileOpen] = useState(false);
 
     useEffect(() => {
         try {
             localStorage.setItem("sidebar-collapsed", collapsed ? "1" : "0");
-        } catch {
-            // ignore storage errors (private browsing, etc.)
-        }
+        } catch {}
     }, [collapsed]);
 
-    // Close the mobile drawer whenever the route changes.
     useEffect(() => {
         setMobileOpen(false);
     }, [location.pathname]);
-
-    const visibleNavItems = navItems.filter(
-        (item) => user && item.roles.includes(user.role),
-    );
 
     const handleLogout = () => {
         logout();
@@ -124,14 +79,115 @@ export default function Sidebar() {
     };
 
     const initials = user?.employee
-        ? `${user.employee.firstName[0]}${user.employee.lastName[0]}`
+        ? `${user.employee.firstName?.[0] || ''}${user.employee.lastName?.[0] || ''}`
         : user?.email?.[0]?.toUpperCase() || "?";
+
+    const navSections: NavSection[] = [
+        {
+            title: "OVERVIEW",
+            items: [
+                {
+                    label: "Dashboard",
+                    path: "/",
+                    icon: LayoutDashboard,
+                },
+            ],
+        },
+        {
+            title: "SELF-SERVICE (MY WORKSPACE)",
+            items: [
+                {
+                    label: "My Profile",
+                    path: "/profile",
+                    icon: User,
+                },
+                {
+                    label: "My Attendance",
+                    path: "/attendance",
+                    icon: Clock,
+                },
+                {
+                    label: "Time Off / Leaves",
+                    path: "/time-off",
+                    icon: CalendarDays,
+                },
+                {
+                    label: "My Payslips",
+                    path: "/payslips",
+                    icon: Wallet,
+                },
+            ],
+        },
+        {
+            title: "COMPANY (READ-ONLY)",
+            items: [
+                {
+                    label: "Team Directory",
+                    path: "/directory",
+                    icon: Building2,
+                },
+            ],
+        },
+    ];
+
+    // Add HR & Admin management options if user has elevated role
+    const isAdminOrHR = user && ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"].includes(user.role);
+    if (isAdminOrHR) {
+        navSections.push({
+            title: "ADMINISTRATION",
+            items: [
+                {
+                    label: "Employees",
+                    path: "/admin/employees",
+                    icon: Users,
+                    roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
+                },
+                {
+                    label: "User Management",
+                    path: "/users",
+                    icon: ShieldCheck,
+                    roles: ["ADMIN"],
+                },
+                {
+                    label: "Contracts",
+                    path: "/contracts",
+                    icon: FileText,
+                    roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
+                },
+                {
+                    label: "Payroll",
+                    path: "/payroll",
+                    icon: Wallet,
+                    roles: ["ADMIN", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
+                },
+                {
+                    label: "Reports",
+                    path: "/reports",
+                    icon: BarChart3,
+                    roles: ["ADMIN", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
+                },
+            ],
+        });
+    }
+
+    navSections.push({
+        title: "ACCOUNT",
+        items: [
+            {
+                label: "Account Settings",
+                path: "/settings",
+                icon: Settings,
+            },
+        ],
+    });
 
     const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
         <>
             {/* Brand */}
             <div
-                className={`flex items-center bg-[#f9f5f2] h-16 shrink-0 ${collapsed ? "justify-center px-0" : "justify-between px-4"}`}
+                className={`flex items-center bg-[#f9f5f2] h-16 shrink-0 ${
+                    collapsed ? "justify-center px-0" : "justify-between px-4"
+                }`}
             >
                 <Link
                     to="/"
@@ -147,12 +203,12 @@ export default function Sidebar() {
                     )}
                     {/* <img src="/logo.png" className="w-10" alt="" /> */}
                 </Link>
-                {/* Desktop collapse toggle */}
+
                 <button
                     onClick={() => setCollapsed((c) => !c)}
                     className={`hidden md:flex p-1.5 text-gray-400 rounded-full transition-all duration-150 ease-out cursor-pointer hover:text-gray-700 cursor-pointer hover:bg-black/[0.05] active:scale-90 ${
                         collapsed
-                            ? "absolute right-[-15px] top-5 z-50 bg-white border border-black/[0.08] shadow-[0_1px_4px_rgba(0,0,0,0.12)]"
+                            ? "absolute right-[-15px] top-5 z-50 bg-white border border-black/[0.08] shadow-sm"
                             : ""
                     }`}
                     title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -163,7 +219,7 @@ export default function Sidebar() {
                         <ChevronLeft className="w-4 h-4" />
                     )}
                 </button>
-                {/* Mobile close */}
+
                 <button
                     onClick={() => setMobileOpen(false)}
                     className="md:hidden p-1.5 text-gray-400 rounded-full transition-all duration-150 ease-out cursor-pointer hover:text-gray-700 cursor-pointer hover:bg-black/[0.05] active:scale-90"
@@ -172,16 +228,29 @@ export default function Sidebar() {
                 </button>
             </div>
 
-            {/* Nav */}
-            {/* Nav */}
+            {/* Nav with Section Headers */}
             <nav
                 className={`flex-1 bg-[#f9f5f2] border-t border-amber-600/40 min-h-0 px-2.5 py-4 space-y-1 ${
                     collapsed ? "overflow-hidden" : "overflow-y-auto"
                 }`}
             >
-                {visibleNavItems.map((item) => {
-                    const active = location.pathname === item.path;
-                    const Icon = item.icon;
+                {navSections.map((section, sIdx) => {
+                    const filteredItems = section.items.filter(
+                        (item) => !item.roles || (user && item.roles.includes(user.role))
+                    );
+
+                    if (filteredItems.length === 0) return null;
+
+                    return (
+                        <div key={sIdx} className="space-y-1">
+                            {!collapsed && (
+                                <h4 className="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                                    {section.title}
+                                </h4>
+                            )}
+                            {filteredItems.map((item) => {
+                                const active = location.pathname === item.path;
+                                const Icon = item.icon;
 
                     return (
                         <Link
@@ -196,7 +265,7 @@ export default function Sidebar() {
                             } ${
                                 active
                                     ? "bg-blue-600/10 text-blue-600"
-                                    : "text-gray-600 cursor-pointer hover:text-gray-900 cursor-pointer hover:bg-black/[0.04]"
+                                    : "text-gray-600 hover:text-gray-900 hover:bg-black/[0.04]"
                             }`}
                         >
                             <Icon
@@ -204,12 +273,12 @@ export default function Sidebar() {
                                 strokeWidth={2}
                             />
 
-                            {!collapsed && (
-                                <span className="truncate">{item.label}</span>
-                            )}
+                                        {!collapsed && (
+                                            <span className="truncate">{item.label}</span>
+                                        )}
 
                             {collapsed && (
-                                <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-[12px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-cursor-pointer hover:opacity-100 z-50">
+                                <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-[12px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 z-50">
                                     {item.label}
                                 </span>
                             )}
@@ -218,19 +287,19 @@ export default function Sidebar() {
                 })}
             </nav>
 
-            {/* User */}
+            {/* Footer / User Profile & Logout */}
             <div
-                className={`shrink-0 border-t border-amber-600/40 bg-[#f9f5f2] p-3 ${collapsed ? "flex flex-col items-center gap-2" : ""}`}
+                className={`shrink-0 border-t border-black/[0.06] p-3 ${collapsed ? "flex flex-col items-center gap-2" : ""}`}
             >
                 <div
-                    className={`flex items-center cursor-pointer hover:bg-blue-100/30 gap-2.5 rounded-[12px] p-1.5 ${collapsed ? "flex-col" : ""}`}
+                    className={`flex items-center gap-2.5 rounded-[12px] p-1.5 ${collapsed ? "flex-col" : ""}`}
                 >
-                    <div className="w-9 h-9 shrink-0 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center text-[13px] font-semibold">
+                    <div className="w-9 h-9 shrink-0 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[13px] font-bold">
                         {initials}
                     </div>
                     {!collapsed && (
                         <div className="min-w-0 flex-1">
-                            <p className="text-[13px] font-medium text-gray-900 truncate leading-tight">
+                            <p className="text-[13px] font-semibold text-gray-900 truncate leading-tight">
                                 {user?.employee
                                     ? `${user.employee.firstName} ${user.employee.lastName}`
                                     : user?.email}
@@ -246,17 +315,18 @@ export default function Sidebar() {
                         </div>
                     )}
                 </div>
+
                 <button
                     onClick={handleLogout}
                     title="Logout"
-                    className={`flex items-center gap-2.5 rounded-[12px] text-[13px] font-medium text-gray-500 transition-all duration-150 ease-out cursor-pointer cursor-pointer hover:text-red-600 cursor-pointer hover:bg-red-500/10 active:scale-[0.97] ${
+                    className={`flex items-center gap-2.5 rounded-[12px] text-[13px] font-medium text-gray-500 transition-all duration-150 ease-out hover:text-red-600 hover:bg-red-500/10 active:scale-[0.97] ${
                         collapsed
                             ? "justify-center w-9 h-9"
-                            : "w-full px-3 py-2 mt-1"
+                            : "w-full px-3 py-2"
                     }`}
                 >
                     <FiLogOut className="w-4 h-4 shrink-0" />
-                    {!collapsed && <span>Log out</span>}
+                    {!collapsed && <span>Logout</span>}
                 </button>
             </div>
         </>
@@ -265,17 +335,17 @@ export default function Sidebar() {
     return (
         <>
             {/* Mobile top bar */}
-            <div className="md:hidden sticky top-0 z-40 flex items-center gap-3 h-14 px-4 bg-white/80 backdrop-blur-xl border-b border-black/[0.06] [font-family:-apple-system,BlinkMacSystemFont,'SF_Pro_Text','Inter',sans-serif]">
+            <div className="md:hidden sticky top-0 z-40 flex items-center gap-3 h-14 px-4 bg-white/80 backdrop-blur-xl border-b border-black/[0.06]">
                 <button
                     onClick={() => setMobileOpen(true)}
-                    className="p-2 -ml-2 text-gray-500 rounded-full transition-all duration-150 ease-out cursor-pointer hover:bg-black/[0.05] active:scale-90"
+                    className="p-2 -ml-2 text-gray-500 rounded-full transition-all duration-150 ease-out hover:bg-black/[0.05] active:scale-90"
                 >
                     <Menu className="w-5 h-5" />
                 </button>
-                <div className="w-7 h-7 bg-blue-600 rounded-[9px] flex items-center justify-center">
-                    <HiOutlineBuildingOffice2 className="w-4 h-4 text-white" />
+                <div className="w-7 h-7 bg-blue-600 rounded-[9px] flex items-center justify-center text-white font-bold text-xs">
+                    P360
                 </div>
-                <span className="text-[15px] font-semibold text-gray-900 tracking-[-0.01em]">
+                <span className="text-[15px] font-bold text-gray-900 tracking-tight">
                     PeoplePay360
                 </span>
             </div>
@@ -283,26 +353,23 @@ export default function Sidebar() {
             {/* Mobile overlay */}
             {mobileOpen && (
                 <div
-                    className="md:hidden fixed inset-0 z-50 bg-black/30 backdrop-blur-sm transition-opacity duration-200 ease-out"
+                    className="md:hidden fixed inset-0 z-50 bg-black/30 backdrop-blur-sm transition-opacity"
                     onClick={() => setMobileOpen(false)}
                 >
                     <aside
                         onClick={(e) => e.stopPropagation()}
-                        className="h-full w-72 max-w-[80vw] flex flex-col bg-white/95 backdrop-blur-xl border-r border-black/[0.06] shadow-[0_0_40px_rgba(0,0,0,0.15)] transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] [font-family:-apple-system,BlinkMacSystemFont,'SF_Pro_Text','Inter',sans-serif]"
+                        className="h-full w-72 max-w-[80vw] flex flex-col bg-white border-r shadow-2xl"
                     >
-                        <SidebarContent
-                            onNavigate={() => setMobileOpen(false)}
-                        />
+                        <SidebarContent onNavigate={() => setMobileOpen(false)} />
                     </aside>
                 </div>
             )}
 
             {/* Desktop sidebar */}
             <aside
-                className={`hidden md:flex md:flex-col shrink-0 relative min-w-0 bg-white/80 backdrop-blur-xl border-r border-black/[0.06] h-screen sticky top-0 transition-[width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] [font-family:-apple-system,BlinkMacSystemFont,'SF_Pro_Text','Inter',sans-serif] ${
+                className={`hidden md:flex md:flex-col shrink-0 relative min-w-0 bg-white/90 backdrop-blur-xl border-r border-black/[0.06] h-screen sticky top-0 transition-[width] duration-200 ${
                     collapsed ? "w-[76px]" : "w-64"
                 }`}
-                style={{ WebkitBackdropFilter: "blur(20px) saturate(180%)" }}
             >
                 <SidebarContent />
             </aside>

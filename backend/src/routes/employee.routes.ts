@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import {
+  getMyProfile,
+  updateMyProfile,
   getAllEmployees,
   getEmployeeById,
   createEmployee,
@@ -10,24 +12,61 @@ import {
 } from '../controllers/employee.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { authorize } from '../middleware/role.middleware';
-import { validateCreateEmployee, validateUpdateEmployee } from '../validators/employee.validator';
+import {
+  validateCreateEmployee,
+  validateUpdateEmployee,
+} from '../validators/employee.validator';
 
 const router = Router();
 
-// All employee routes require authentication
+// ── Global: every route below requires a valid JWT ──
 router.use(authenticate);
 
-// Department routes
-router.get('/departments', getAllDepartments);
+// ──────────────────────────────────────────────
+// 👤 EMPLOYEE SELF-SERVICE  (any authenticated user with an employeeId)
+//    These MUST come BEFORE /:id to avoid param collision
+// ──────────────────────────────────────────────
+router.get(
+  '/me',
+  authorize(['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER', 'ADMIN']),
+  getMyProfile
+);
+
+router.put(
+  '/me',
+  authorize(['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER', 'ADMIN']),
+  updateMyProfile
+);
+
+// ──────────────────────────────────────────────
+// 🏢 DEPARTMENT ROUTES
+// ──────────────────────────────────────────────
+router.get(
+  '/departments',
+  authorize(['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER', 'ADMIN']),
+  getAllDepartments
+);
+
 router.post(
   '/departments',
   authorize(['HR_MANAGER', 'HR_PAYROLL_MANAGER', 'ADMIN']),
   createDepartment
 );
 
-// Employee routes
-router.get('/', getAllEmployees);
-router.get('/:id', getEmployeeById);
+// ──────────────────────────────────────────────
+// 🛠️ ADMIN / HR EMPLOYEE MANAGEMENT
+// ──────────────────────────────────────────────
+router.get(
+  '/',
+  authorize(['HR_MANAGER', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER', 'ADMIN']),
+  getAllEmployees
+);
+
+router.get(
+  '/:id',
+  authorize(['HR_MANAGER', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER', 'ADMIN']),
+  getEmployeeById
+);
 
 router.post(
   '/',

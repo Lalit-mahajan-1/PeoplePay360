@@ -2,6 +2,107 @@ import { Request, Response } from 'express';
 import { employeeService } from '../services/employee.service';
 import prisma from '../lib/prisma';
 
+// ──────────────────────────────────────────────
+// EMPLOYEE SELF-SERVICE CONTROLLERS (NEW)
+// ──────────────────────────────────────────────
+
+export const getMyProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    let employeeId = req.user?.employeeId;
+
+    if (!employeeId) {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        include: { employee: true },
+      });
+
+      if (user?.employee) {
+        employeeId = user.employee.id;
+      } else if (user) {
+        let emp = await prisma.employee.findUnique({ where: { email: user.email } });
+        if (!emp) {
+          const count = await prisma.employee.count();
+          const code = `EMP${String(count + 1).padStart(3, '0')}`;
+          const emailParts = user.email.split('@')[0].split('.');
+          const firstName = emailParts[0].charAt(0).toUpperCase() + emailParts[0].slice(1);
+          const lastName = emailParts[1] ? emailParts[1].charAt(0).toUpperCase() + emailParts[1].slice(1) : 'User';
+          
+          emp = await prisma.employee.create({
+            data: {
+              employeeCode: code,
+              firstName,
+              lastName,
+              email: user.email,
+              status: 'ACTIVE',
+              employeeType: 'FULL_TIME',
+            },
+          });
+        }
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { employeeId: emp.id },
+        });
+        employeeId = emp.id;
+      }
+    }
+
+    const profile = await employeeService.getMyProfile(employeeId!);
+    res.json({ success: true, data: profile });
+  } catch (error: any) {
+    if (error.status) {
+      res.status(error.status).json({ success: false, message: error.message });
+      return;
+    }
+    console.error('Error fetching own profile:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch profile' });
+  }
+};
+
+export const updateMyProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    let employeeId = req.user?.employeeId;
+
+    if (!employeeId) {
+      const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+      if (user) {
+        const emp = await prisma.employee.findUnique({ where: { email: user.email } });
+        if (emp) employeeId = emp.id;
+      }
+    }
+
+    if (!employeeId) {
+      res.status(400).json({
+        success: false,
+        message: 'No employee record linked to this account.',
+      });
+      return;
+    }
+
+    const updated = await employeeService.updateMyProfile(
+      employeeId,
+      req.body,
+      req.user!
+    );
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: updated,
+    });
+  } catch (error: any) {
+    if (error.status) {
+      res.status(error.status).json({ success: false, message: error.message });
+      return;
+    }
+    console.error('Error updating own profile:', error);
+    res.status(500).json({ success: false, message: 'Failed to update profile' });
+  }
+};
+
+// ──────────────────────────────────────────────
+// ADMIN / HR CONTROLLERS (Existing)
+// ──────────────────────────────────────────────
+
 export const getAllEmployees = async (req: Request, res: Response): Promise<void> => {
   try {
     const filters = {
@@ -81,7 +182,10 @@ export const deleteEmployee = async (req: Request, res: Response): Promise<void>
   }
 };
 
-// Department Controllers
+// ──────────────────────────────────────────────
+// DEPARTMENT CONTROLLERS (Existing)
+// ──────────────────────────────────────────────
+
 export const getAllDepartments = async (_req: Request, res: Response): Promise<void> => {
   try {
     const departments = await prisma.department.findMany({
