@@ -66,7 +66,7 @@ const INPUT_SOURCES = [
 
 export default function SalaryRules() {
     const { hasRole } = useAuth();
-    const canDelete = hasRole(['ADMIN', 'HR_PAYROLL_MANAGER']);
+    const canManageRule = hasRole(['ADMIN', 'HR_PAYROLL_MANAGER']);
     const [rules, setRules] = useState<SalaryRule[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -214,12 +214,14 @@ export default function SalaryRules() {
                     </p>
                 </div>
 
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md shadow-blue-600/20 transition cursor-pointer"
-                >
-                    <Plus className="w-4 h-4" /> New Salary Rule
-                </button>
+                {canManageRule && (
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md shadow-blue-600/20 transition cursor-pointer"
+                    >
+                        <Plus className="w-4 h-4" /> New Salary Rule
+                    </button>
+                )}
             </div>
 
             {/* Filter Bar */}
@@ -336,22 +338,24 @@ export default function SalaryRules() {
 
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    <button
-                                                        onClick={() => handleOpenModal(rule)}
-                                                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                                                        title="Edit Rule"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                    {canDelete && (
-                                                        <button
-                                                            onClick={() => handleDelete(rule.id, rule.name)}
-                                                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
-                                                            title="Delete Rule"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    )}
+                                                        {canManageRule && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleOpenModal(rule)}
+                                                                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                                                                    title="Edit Rule"
+                                                                >
+                                                                    <Edit2 className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDelete(rule.id, rule.name)}
+                                                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                                                                    title="Delete Rule"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </>
+                                                        )}
                                                 </div>
                                             </td>
                                         </tr>

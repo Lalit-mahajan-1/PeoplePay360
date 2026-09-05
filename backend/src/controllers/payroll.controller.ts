@@ -82,6 +82,13 @@ export const sendPayslips = async (req: Request, res: Response): Promise<void> =
   } catch (e: any) { handleError(res, e, 'sending payslips'); }
 };
 
+export const deletePayrun = async (req: Request, res: Response): Promise<void> => {
+  try {
+    await payrollService.deletePayrun(req.params.id as string, req.user!);
+    res.json({ success: true, message: 'Payrun deleted successfully' });
+  } catch (e: any) { handleError(res, e, 'deleting payrun'); }
+};
+
 // ========== PAYSLIPS ==========
 export const getPayslipById = async (req: Request, res: Response): Promise<void> => {
   try {

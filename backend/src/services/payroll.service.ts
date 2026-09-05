@@ -602,6 +602,30 @@ export class PayrollService {
       orderBy: { employee: { firstName: 'asc' } },
     });
   }
+
+  async deletePayrun(payrunId: string, authUser: AuthUser) {
+    const payrun = await prisma.payrun.findUnique({ where: { id: payrunId } });
+    if (!payrun) throw { status: 404, message: 'Payrun not found' };
+    if (payrun.status === 'PAID') {
+      throw { status: 400, message: 'Cannot delete a paid payrun' };
+    }
+
+    await prisma.payslipLine.deleteMany({
+      where: { payslip: { payrunId } },
+    });
+    await prisma.payslip.deleteMany({ where: { payrunId } });
+    await prisma.payrollWarning.deleteMany({ where: { payrunId } });
+    await prisma.payrunEmployee.deleteMany({ where: { payrunId } });
+    await prisma.payrun.delete({ where: { id: payrunId } });
+
+    await createAuditLog({
+      action: 'DELETE',
+      module: 'PAYRUN',
+      recordId: payrunId,
+      details: `Deleted payrun "${payrun.name}"`,
+      userId: authUser.userId,
+    });
+  }
 }
 
 export const payrollService = new PayrollService();

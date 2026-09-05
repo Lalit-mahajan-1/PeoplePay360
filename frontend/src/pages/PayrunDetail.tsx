@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import {
     Wallet,
     ArrowLeft,
@@ -33,6 +34,8 @@ const fmt = (n: number | null | undefined) =>
 export default function PayrunDetail() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { hasRole } = useAuth();
+    const canManagePayment = hasRole(['ADMIN', 'HR_PAYROLL_MANAGER']);
 
     const [payrun, setPayrun] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -231,21 +234,25 @@ export default function PayrunDetail() {
 
                     {payrun.status === 'VALIDATED' && (
                         <>
-                            <button
-                                onClick={handleMarkPaid}
-                                disabled={actionLoading}
-                                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 transition cursor-pointer"
-                            >
-                                <Banknote className="w-4 h-4" />
-                                {actionLoading ? 'Processing...' : 'Mark as PAID'}
-                            </button>
-                            <button
-                                onClick={handleSendPayslips}
-                                disabled={actionLoading}
-                                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer"
-                            >
-                                <Mail className="w-4 h-4" /> Dispatch Payslip Emails
-                            </button>
+                            {canManagePayment && (
+                                <button
+                                    onClick={handleMarkPaid}
+                                    disabled={actionLoading}
+                                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 transition cursor-pointer"
+                                >
+                                    <Banknote className="w-4 h-4" />
+                                    {actionLoading ? 'Processing...' : 'Mark as PAID'}
+                                </button>
+                            )}
+                            {canManagePayment && (
+                                <button
+                                    onClick={handleSendPayslips}
+                                    disabled={actionLoading}
+                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer"
+                                >
+                                    <Mail className="w-4 h-4" /> Dispatch Payslip Emails
+                                </button>
+                            )}
                         </>
                     )}
 
@@ -254,13 +261,15 @@ export default function PayrunDetail() {
                             <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center gap-1.5">
                                 <CheckCircle2 className="w-4 h-4" /> Paid & Finalized
                             </span>
-                            <button
-                                onClick={handleSendPayslips}
-                                disabled={actionLoading}
-                                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer"
-                            >
-                                <Mail className="w-4 h-4" /> Send Payslip Emails
-                            </button>
+                            {canManagePayment && (
+                                <button
+                                    onClick={handleSendPayslips}
+                                    disabled={actionLoading}
+                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer"
+                                >
+                                    <Mail className="w-4 h-4" /> Send Payslip Emails
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>

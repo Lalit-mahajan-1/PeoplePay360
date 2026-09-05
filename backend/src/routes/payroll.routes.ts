@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   getAllPayruns, getPayrunById, createPayrun, computePayrun, validatePayrun, markPayrunPaid,
-  sendPayslips, getPayslipById, getMyPayslips, getPayslipsForPayrun,
+  sendPayslips, deletePayrun, getPayslipById, getMyPayslips, getPayslipsForPayrun,
   getEligibleEmployees, previewPayrunStep1, printPayslip,
 } from '../controllers/payroll.controller';
 import { authenticate } from '../middleware/auth.middleware';
@@ -29,9 +29,10 @@ router.get('/payruns', authorize(ALL_PAYROLL), getAllPayruns);
 router.post('/payruns', authorize(ALL_PAYROLL), createPayrun);
 router.get('/payruns/:id', authorize(ALL_PAYROLL), getPayrunById);
 router.post('/payruns/:id/compute', authorize(ALL_PAYROLL), computePayrun);
-router.post('/payruns/:id/validate', authorize(PAYROLL_MANAGER), validatePayrun);
+router.post('/payruns/:id/validate', authorize(ALL_PAYROLL), validatePayrun);
 router.post('/payruns/:id/mark-paid', authorize(PAYROLL_MANAGER), markPayrunPaid);
-router.post('/payruns/:id/send-payslips', authorize(ALL_PAYROLL), sendPayslips);
+router.post('/payruns/:id/send-payslips', authorize(PAYROLL_MANAGER), sendPayslips);
+router.delete('/payruns/:id', authorize(PAYROLL_MANAGER), deletePayrun);
 router.get('/payruns/:payrunId/payslips', authorize(ALL_PAYROLL), getPayslipsForPayrun);
 
 export default router;
