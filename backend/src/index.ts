@@ -6,7 +6,9 @@ import prisma from './lib/prisma';
 // ── Route Imports ──
 import authRoutes from './routes/auth.routes';
 import employeeRoutes from './routes/employee.routes';
+import attendanceRoutes from './routes/attendance.routes';
 
+// Force nodemon reload for attendance routes
 
 dotenv.config();
 
@@ -34,7 +36,7 @@ app.get('/api/health', async (_req, res) => {
 // ── Routes ──
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
-// app.use('/api/attendance', attendanceRoutes);
+app.use('/api/attendance', attendanceRoutes);
 // app.use('/api/leave', leaveRoutes);
 // app.use('/api/payslips', payslipRoutes);
 
