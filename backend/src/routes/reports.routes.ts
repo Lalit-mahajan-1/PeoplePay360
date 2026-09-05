@@ -24,6 +24,8 @@ router.get('/payslip/:id/pdf', authorize(ALL_PAYROLL.concat('EMPLOYEE')), printP
 router.get('/payslip/:id/print', authorize(ALL_PAYROLL.concat('EMPLOYEE')), printPayslipReport);
 router.post('/dispatch-payslips', authorize(PAYROLL_MANAGER), dispatchPayslipsReport);
 router.post('/publish-portal', authorize(PAYROLL_MANAGER), publishToPortalReport);
+router.post('/publish-portal/:id', authorize(PAYROLL_MANAGER), publishToPortalReport);
 router.post('/send-email', authorize(PAYROLL_MANAGER), emailPayslipsReport);
+router.post('/send-email/:id', authorize(PAYROLL_MANAGER), emailPayslipsReport);
 
 export default router;

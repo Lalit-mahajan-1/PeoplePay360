@@ -4,6 +4,7 @@ import {
   sendPayslips, deletePayrun, getPayslipById, getMyPayslips, getPayslipsForPayrun,
   getEligibleEmployees, previewPayrunStep1, printPayslip,
 } from '../controllers/payroll.controller';
+import { publishToPortalReport, emailPayslipsReport } from '../controllers/reports.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { authorize } from '../middleware/role.middleware';
 
@@ -32,6 +33,9 @@ router.post('/payruns/:id/compute', authorize(ALL_PAYROLL), computePayrun);
 router.post('/payruns/:id/validate', authorize(ALL_PAYROLL), validatePayrun);
 router.post('/payruns/:id/mark-paid', authorize(PAYROLL_MANAGER), markPayrunPaid);
 router.post('/payruns/:id/send-payslips', authorize(PAYROLL_MANAGER), sendPayslips);
+router.post('/payruns/:id/send', authorize(PAYROLL_MANAGER), sendPayslips);
+router.post('/payruns/:id/publish-portal', authorize(PAYROLL_MANAGER), publishToPortalReport);
+router.post('/payruns/:id/send-email', authorize(PAYROLL_MANAGER), emailPayslipsReport);
 router.delete('/payruns/:id', authorize(PAYROLL_MANAGER), deletePayrun);
 router.get('/payruns/:payrunId/payslips', authorize(ALL_PAYROLL), getPayslipsForPayrun);
 

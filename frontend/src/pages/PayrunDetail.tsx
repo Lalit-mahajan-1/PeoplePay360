@@ -106,7 +106,7 @@ export default function PayrunDetail() {
     const handlePublishPortal = async () => {
         setActionLoading(true);
         try {
-            const res = await api.post('/reports/publish-portal', { payrunId: id });
+            const res = await api.post(`/reports/publish-portal/${id}`, { payrunId: id });
             toast.success(res.data?.message || 'Published payslips to Employee Portal!');
             loadPayrun();
         } catch (err: any) {
@@ -119,7 +119,7 @@ export default function PayrunDetail() {
     const handleEmailNodemailer = async () => {
         setActionLoading(true);
         try {
-            const res = await api.post('/reports/send-email', { payrunId: id });
+            const res = await api.post(`/reports/send-email/${id}`, { payrunId: id });
             toast.success(res.data?.message || 'Mailed payslip PDFs via Nodemailer!');
             loadPayrun();
         } catch (err: any) {
