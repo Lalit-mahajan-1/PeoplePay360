@@ -18,11 +18,16 @@ interface Employee {
     email: string;
     phone?: string;
     gender?: string;
+    avatarUrl?: string;
     department?: Department;
     departmentId?: string;
     jobPosition?: string;
     jobTitle?: string;
-    manager?: { id: string; firstName: string; lastName: string };
+    manager?: {
+        id: string;
+        firstName: string;
+        lastName: string;
+    };
     managerId?: string;
     hireDate: string;
     status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
@@ -33,9 +38,18 @@ interface Employee {
 }
 
 const statusConfig: Record<string, { color: string; bg: string }> = {
-    ACTIVE: { color: "text-emerald-600", bg: "bg-emerald-500/10" },
-    INACTIVE: { color: "text-red-600", bg: "bg-red-500/10" },
-    ARCHIVED: { color: "text-gray-500", bg: "bg-gray-500/10" },
+    ACTIVE: {
+        color: "text-emerald-600",
+        bg: "bg-emerald-500/10",
+    },
+    INACTIVE: {
+        color: "text-red-600",
+        bg: "bg-red-500/10",
+    },
+    ARCHIVED: {
+        color: "text-gray-500",
+        bg: "bg-gray-500/10",
+    },
 };
 
 const typeLabels: Record<string, string> = {
@@ -45,8 +59,10 @@ const typeLabels: Record<string, string> = {
     INTERN: "Intern",
 };
 
-// Light, pastel accent palette — rotated per employee so avatars read as
-// distinct people rather than a wall of the same brand blue.
+/* ============================================================
+   Avatar colors used only when an employee has no photo
+============================================================ */
+
 const avatarPalette = [
     { bg: "bg-blue-500/10", text: "text-blue-600" },
     { bg: "bg-violet-500/10", text: "text-violet-600" },
@@ -58,14 +74,66 @@ const avatarPalette = [
 
 function getAvatarStyle(id: string) {
     let hash = 0;
-    for (let i = 0; i < id.length; i++)
+
+    for (let i = 0; i < id.length; i++) {
         hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+    }
+
     return avatarPalette[hash % avatarPalette.length];
+}
+
+function getInitials(emp: Employee) {
+    const first = emp.firstName?.[0] || "";
+    const last = emp.lastName?.[0] || "";
+
+    return `${first}${last}`.toUpperCase() || "?";
+}
+
+/* ============================================================
+   Reusable employee avatar
+============================================================ */
+
+function EmployeeAvatar({
+    employee,
+    size = "normal",
+}: {
+    employee: Employee;
+    size?: "normal" | "small";
+}) {
+    const avatar = getAvatarStyle(employee.id);
+    const [imageError, setImageError] = useState(false);
+
+    const hasImage = Boolean(employee.avatarUrl) && !imageError;
+
+    const sizeClasses =
+        size === "small" ? "h-8 w-8 text-[12px]" : "h-9 w-9 text-[13px]";
+
+    return (
+        <div
+            className={`relative shrink-0 overflow-hidden rounded-full ${sizeClasses} ${
+                hasImage
+                    ? "border border-slate-200 bg-slate-100"
+                    : `${avatar.bg} ${avatar.text}`
+            } flex items-center justify-center font-semibold`}
+        >
+            {hasImage ? (
+                <img
+                    src={employee.avatarUrl}
+                    alt={`${employee.firstName} ${employee.lastName}`}
+                    className="h-full w-full object-cover"
+                    onError={() => setImageError(true)}
+                />
+            ) : (
+                getInitials(employee)
+            )}
+        </div>
+    );
 }
 
 export default function EmployeeList() {
     const { hasRole } = useAuth();
     const navigate = useNavigate();
+
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -85,10 +153,19 @@ export default function EmployeeList() {
     const fetchEmployees = async () => {
         try {
             setLoading(true);
+
             const params: Record<string, string> = {};
-            if (search) params.search = search;
-            if (statusFilter) params.status = statusFilter;
+
+            if (search) {
+                params.search = search;
+            }
+
+            if (statusFilter) {
+                params.status = statusFilter;
+            }
+
             const response = await api.get("/employees", { params });
+
             setEmployees(response.data.data);
         } catch (error) {
             toast.error("Failed to load employees");
@@ -103,6 +180,7 @@ export default function EmployeeList() {
 
     useEffect(() => {
         const timer = setTimeout(fetchEmployees, 400);
+
         return () => clearTimeout(timer);
     }, [search, statusFilter]);
 
@@ -120,14 +198,18 @@ export default function EmployeeList() {
     };
 
     const now = new Date();
+
     const activeCount = employees.filter((e) => e.status === "ACTIVE").length;
+
     const newHiresCount = employees.filter((e) => {
         const d = new Date(e.hireDate);
+
         return (
             d.getMonth() === now.getMonth() &&
             d.getFullYear() === now.getFullYear()
         );
     }).length;
+
     const departmentCount = new Set(
         employees
             .map((e) => e.department?.name)
@@ -141,7 +223,7 @@ export default function EmployeeList() {
             accent: "violet",
             icon: (
                 <svg
-                    className="w-5 h-5"
+                    className="h-5 w-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -161,7 +243,7 @@ export default function EmployeeList() {
             accent: "emerald",
             icon: (
                 <svg
-                    className="w-5 h-5"
+                    className="h-5 w-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -181,7 +263,7 @@ export default function EmployeeList() {
             accent: "amber",
             icon: (
                 <svg
-                    className="w-5 h-5"
+                    className="h-5 w-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -201,7 +283,7 @@ export default function EmployeeList() {
             accent: "teal",
             icon: (
                 <svg
-                    className="w-5 h-5"
+                    className="h-5 w-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -219,7 +301,11 @@ export default function EmployeeList() {
 
     const statAccentClasses: Record<
         string,
-        { tile: string; icon: string; value: string }
+        {
+            tile: string;
+            icon: string;
+            value: string;
+        }
     > = {
         violet: {
             tile: "bg-violet-500/[0.06] border-violet-500/10",
@@ -247,7 +333,7 @@ export default function EmployeeList() {
         return (
             <div className="flex items-center justify-center py-20 [font-family:-apple-system,BlinkMacSystemFont,'SF_Pro_Text','Inter',sans-serif]">
                 <div className="flex items-center gap-3 text-gray-500">
-                    <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
+                    <svg className="h-6 w-6 animate-spin" viewBox="0 0 24 24">
                         <circle
                             className="opacity-25"
                             cx="12"
@@ -257,12 +343,14 @@ export default function EmployeeList() {
                             strokeWidth="4"
                             fill="none"
                         />
+
                         <path
                             className="opacity-75"
                             fill="currentColor"
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                         />
                     </svg>
+
                     <span className="text-[15px] tracking-[-0.005em]">
                         Loading employees...
                     </span>
@@ -273,27 +361,33 @@ export default function EmployeeList() {
 
     return (
         <div className="[font-family:-apple-system,BlinkMacSystemFont,'SF_Pro_Text','Inter',sans-serif]">
-            {/* Stats — light pastel accents that contrast with the primary blue */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            {/* ============================================================
+                STATS
+            ============================================================ */}
+
+            <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 {stats.map((stat) => {
                     const classes = statAccentClasses[stat.accent];
+
                     return (
                         <div
                             key={stat.label}
                             className={`flex items-center gap-3 rounded-[18px] border p-4 transition-transform duration-150 ease-out hover:-translate-y-0.5 ${classes.tile}`}
                         >
                             <div
-                                className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${classes.icon}`}
+                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${classes.icon}`}
                             >
                                 {stat.icon}
                             </div>
+
                             <div className="min-w-0">
                                 <p
-                                    className={`text-[20px] font-semibold tracking-[-0.01em] leading-tight ${classes.value}`}
+                                    className={`text-[20px] font-semibold leading-tight tracking-[-0.01em] ${classes.value}`}
                                 >
                                     {stat.value}
                                 </p>
-                                <p className="text-[12px] text-gray-500 tracking-[-0.005em] truncate">
+
+                                <p className="truncate text-[12px] tracking-[-0.005em] text-gray-500">
                                     {stat.label}
                                 </p>
                             </div>
@@ -302,12 +396,15 @@ export default function EmployeeList() {
                 })}
             </div>
 
-            {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
-                <div className="flex items-center gap-3 w-full sm:w-auto">
+            {/* ============================================================
+                TOOLBAR
+            ============================================================ */}
+
+            <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+                <div className="flex w-full items-center gap-3 sm:w-auto">
                     <div className="relative flex-1 sm:flex-initial">
                         <svg
-                            className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                            className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -319,34 +416,39 @@ export default function EmployeeList() {
                                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                             />
                         </svg>
+
                         <input
                             type="text"
                             placeholder="Search employees..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-10 pr-4 py-2 bg-gray-50/80 border border-black/[0.08] rounded-full text-[14px] tracking-[-0.005em] outline-none transition-all duration-150 ease-out focus:bg-white focus:ring-4 focus:ring-blue-500/15 focus:border-blue-500/60 w-full sm:w-72"
+                            className="w-full rounded-full border border-black/[0.08] bg-gray-50/80 py-2 pl-10 pr-4 text-[14px] tracking-[-0.005em] outline-none transition-all duration-150 ease-out focus:border-indigo-500/60 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 sm:w-72"
                         />
                     </div>
+
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-3.5 py-2 bg-gray-50/80 border border-black/[0.08] rounded-full text-[14px] tracking-[-0.005em] outline-none transition-all duration-150 ease-out focus:bg-white focus:ring-4 focus:ring-blue-500/15"
+                        className="rounded-full border border-black/[0.08] bg-gray-50/80 px-3.5 py-2 text-[14px] tracking-[-0.005em] outline-none transition-all duration-150 ease-out focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
                     >
                         <option value="">All Status</option>
                         <option value="ACTIVE">Active</option>
                         <option value="INACTIVE">Inactive</option>
                         <option value="ARCHIVED">Archived</option>
                     </select>
+
                     <span className="text-[13px] text-gray-500">
                         {employees.length} total
                     </span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <div className="flex bg-gray-100/80 rounded-full p-1">
+                    {/* View toggle */}
+                    <div className="flex rounded-full bg-gray-100/80 p-1">
                         <button
+                            type="button"
                             onClick={() => setView("list")}
-                            className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium tracking-[-0.005em] transition-all duration-150 ease-out active:scale-95 ${
+                            className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium tracking-[-0.005em] transition-all duration-150 ${
                                 view === "list"
                                     ? "bg-white text-gray-900 shadow-[0_1px_3px_rgba(0,0,0,0.1)]"
                                     : "text-gray-500"
@@ -354,9 +456,11 @@ export default function EmployeeList() {
                         >
                             ☰ List
                         </button>
+
                         <button
+                            type="button"
                             onClick={() => setView("kanban")}
-                            className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium tracking-[-0.005em] transition-all duration-150 ease-out active:scale-95 ${
+                            className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium tracking-[-0.005em] transition-all duration-150 ${
                                 view === "kanban"
                                     ? "bg-white text-gray-900 shadow-[0_1px_3px_rgba(0,0,0,0.1)]"
                                     : "text-gray-500"
@@ -365,13 +469,15 @@ export default function EmployeeList() {
                             ▦ Kanban
                         </button>
                     </div>
+
                     {canCreate && (
                         <button
+                            type="button"
                             onClick={handleCreate}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-[13px] font-semibold tracking-[-0.005em] transition-all duration-150 ease-out active:scale-95 flex items-center gap-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_14px_-4px_rgba(37,99,235,0.4)]"
+                            className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-[13px] font-semibold tracking-[-0.005em] text-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_14px_-4px_rgba(79,70,229,0.35)] transition-all duration-150 hover:bg-indigo-700 active:scale-95"
                         >
                             <svg
-                                className="w-4 h-4"
+                                className="h-4 w-4"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -389,103 +495,132 @@ export default function EmployeeList() {
                 </div>
             </div>
 
-            {/* Empty State */}
+            {/* ============================================================
+                EMPTY STATE
+            ============================================================ */}
+
             {employees.length === 0 ? (
-                <div className="text-center py-16">
-                    <div className="text-5xl mb-4">👥</div>
-                    <h3 className="text-[17px] font-semibold text-gray-900 tracking-[-0.01em] mb-1">
+                <div className="rounded-[20px] border border-slate-200 bg-white py-16 text-center shadow-sm">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-2xl">
+                        👥
+                    </div>
+
+                    <h3 className="mb-1 text-[17px] font-semibold tracking-[-0.01em] text-gray-900">
                         No employees found
                     </h3>
-                    <p className="text-gray-500 text-[14px] tracking-[-0.005em]">
+
+                    <p className="text-[14px] tracking-[-0.005em] text-gray-500">
                         {search || statusFilter
                             ? "Try adjusting your filters"
                             : "Get started by adding your first employee"}
                     </p>
                 </div>
             ) : view === "list" ? (
-                /* List View */
-                <div className="overflow-x-auto rounded-[20px] border border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_10px_24px_-10px_rgba(0,0,0,0.08)] bg-white">
+                /* ========================================================
+                   LIST VIEW
+                ========================================================= */
+
+                <div className="overflow-x-auto rounded-[20px] border border-black/[0.06] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03),0_10px_24px_-10px_rgba(0,0,0,0.08)]">
                     <table className="w-full text-[13px]">
                         <thead>
-                            <tr className="bg-gray-50/70 border-b border-black/[0.06]">
-                                <th className="text-left px-4 py-3 font-semibold text-gray-500 tracking-[0.01em]">
+                            <tr className="border-b border-black/[0.06] bg-gray-50/70">
+                                <th className="px-4 py-3 text-left font-semibold tracking-[0.01em] text-gray-500">
                                     Employee
                                 </th>
-                                <th className="text-left px-4 py-3 font-semibold text-gray-500 tracking-[0.01em]">
+
+                                <th className="px-4 py-3 text-left font-semibold tracking-[0.01em] text-gray-500">
                                     Code
                                 </th>
-                                <th className="text-left px-4 py-3 font-semibold text-gray-500 tracking-[0.01em]">
+
+                                <th className="px-4 py-3 text-left font-semibold tracking-[0.01em] text-gray-500">
                                     Department
                                 </th>
-                                <th className="text-left px-4 py-3 font-semibold text-gray-500 tracking-[0.01em]">
+
+                                <th className="px-4 py-3 text-left font-semibold tracking-[0.01em] text-gray-500">
                                     Position
                                 </th>
-                                <th className="text-left px-4 py-3 font-semibold text-gray-500 tracking-[0.01em]">
+
+                                <th className="px-4 py-3 text-left font-semibold tracking-[0.01em] text-gray-500">
                                     Type
                                 </th>
-                                <th className="text-left px-4 py-3 font-semibold text-gray-500 tracking-[0.01em]">
+
+                                <th className="px-4 py-3 text-left font-semibold tracking-[0.01em] text-gray-500">
                                     Status
                                 </th>
-                                <th className="text-left px-4 py-3 font-semibold text-gray-500 tracking-[0.01em]">
+
+                                <th className="px-4 py-3 text-left font-semibold tracking-[0.01em] text-gray-500">
                                     Hire Date
                                 </th>
                             </tr>
                         </thead>
+
                         <tbody className="divide-y divide-black/[0.05]">
                             {employees.map((emp) => {
-                                const avatar = getAvatarStyle(emp.id);
                                 return (
                                     <tr
                                         key={emp.id}
                                         onClick={() => openEmployee(emp)}
-                                        className="cursor-pointer transition-colors duration-150 ease-out hover:bg-blue-50/50"
+                                        className="cursor-pointer transition-colors duration-150 ease-out hover:bg-indigo-50/40"
                                     >
+                                        {/* Employee */}
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div
-                                                    className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold ${avatar.bg} ${avatar.text}`}
-                                                >
-                                                    {emp.firstName[0]}
-                                                    {emp.lastName[0]}
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium text-gray-900 tracking-[-0.005em]">
+                                                <EmployeeAvatar
+                                                    employee={emp}
+                                                />
+
+                                                <div className="min-w-0">
+                                                    <p className="truncate font-medium tracking-[-0.005em] text-gray-900">
                                                         {emp.firstName}{" "}
                                                         {emp.lastName}
                                                     </p>
-                                                    <p className="text-[12px] text-gray-500">
+
+                                                    <p className="truncate text-[12px] text-gray-500">
                                                         {emp.email}
                                                     </p>
                                                 </div>
                                             </div>
                                         </td>
+
+                                        {/* Code */}
                                         <td className="px-4 py-3">
-                                            <code className="text-[11px] bg-gray-100/80 px-2 py-0.5 rounded-full font-mono text-gray-600">
+                                            <code className="rounded-full bg-gray-100/80 px-2 py-0.5 font-mono text-[11px] text-gray-600">
                                                 {emp.employeeCode}
                                             </code>
                                         </td>
+
+                                        {/* Department */}
                                         <td className="px-4 py-3 text-gray-700">
                                             {emp.department?.name || "—"}
                                         </td>
+
+                                        {/* Position */}
                                         <td className="px-4 py-3 text-gray-700">
-                                            {emp.jobPosition || "—"}
+                                            {emp.jobPosition ||
+                                                emp.jobTitle ||
+                                                "—"}
                                         </td>
+
+                                        {/* Type */}
                                         <td className="px-4 py-3">
-                                            <span className="px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded-full text-[11px] font-medium tracking-[0.005em]">
+                                            <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[11px] font-medium tracking-[0.005em] text-indigo-600">
                                                 {typeLabels[emp.employeeType]}
                                             </span>
                                         </td>
+
+                                        {/* Status */}
                                         <td className="px-4 py-3">
                                             <span
-                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium tracking-[0.005em] ${
-                                                    statusConfig[emp.status]?.bg
-                                                } ${statusConfig[emp.status]?.color}`}
+                                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium tracking-[0.005em] ${statusConfig[emp.status]?.bg} ${statusConfig[emp.status]?.color}`}
                                             >
-                                                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+
                                                 {emp.status}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-gray-500 text-[12px]">
+
+                                        {/* Hire date */}
+                                        <td className="px-4 py-3 text-[12px] text-gray-500">
                                             {new Date(
                                                 emp.hireDate,
                                             ).toLocaleDateString("en-IN", {
@@ -501,77 +636,86 @@ export default function EmployeeList() {
                     </table>
                 </div>
             ) : (
-                /* Kanban View */
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                /* ========================================================
+                   KANBAN VIEW
+                ========================================================= */
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     {["ACTIVE", "INACTIVE", "ARCHIVED"].map((status) => {
                         const filtered = employees.filter(
                             (e) => e.status === status,
                         );
+
                         const config = statusConfig[status];
+
                         return (
                             <div
                                 key={status}
-                                className="bg-gray-50/70 rounded-[20px] p-4 border border-black/[0.04]"
+                                className="rounded-[20px] border border-black/[0.04] bg-gray-50/70 p-4"
                             >
-                                <div className="flex items-center gap-2 mb-4">
+                                <div className="mb-4 flex items-center gap-2">
                                     <span
-                                        className={`w-2 h-2 rounded-full ${config.color.replace("text-", "bg-")}`}
+                                        className={`h-2 w-2 rounded-full ${config.color.replace(
+                                            "text-",
+                                            "bg-",
+                                        )}`}
                                     />
-                                    <h3 className="font-semibold text-gray-900 text-[13px] tracking-[-0.005em]">
+
+                                    <h3 className="text-[13px] font-semibold tracking-[-0.005em] text-gray-900">
                                         {status}
                                     </h3>
-                                    <span className="text-[11px] text-gray-500 bg-white px-2 py-0.5 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
+
+                                    <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-gray-500 shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
                                         {filtered.length}
                                     </span>
                                 </div>
 
                                 <div className="space-y-2">
-                                    {filtered.map((emp) => {
-                                        const avatar = getAvatarStyle(emp.id);
-                                        return (
-                                            <div
-                                                key={emp.id}
-                                                onClick={() =>
-                                                    openEmployee(emp)
-                                                }
-                                                className="bg-white border border-black/[0.05] rounded-[16px] p-4 transition-all duration-150 ease-out hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
-                                            >
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <div
-                                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold ${avatar.bg} ${avatar.text}`}
-                                                    >
-                                                        {emp.firstName[0]}
-                                                        {emp.lastName[0]}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium text-gray-900 text-[13px] tracking-[-0.005em]">
-                                                            {emp.firstName}{" "}
-                                                            {emp.lastName}
-                                                        </p>
-                                                        <p className="text-[11px] text-gray-500">
-                                                            {emp.jobPosition ||
-                                                                "No position"}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] text-gray-500">
-                                                        {emp.department?.name ||
-                                                            "No dept"}
-                                                    </span>
-                                                    <span className="px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded-full text-[11px]">
-                                                        {
-                                                            typeLabels[
-                                                                emp.employeeType
-                                                            ]
-                                                        }
-                                                    </span>
+                                    {filtered.map((emp) => (
+                                        <div
+                                            key={emp.id}
+                                            onClick={() => openEmployee(emp)}
+                                            className="cursor-pointer rounded-[16px] border border-black/[0.05] bg-white p-4 transition-all duration-150 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.12)] active:scale-[0.98]"
+                                        >
+                                            <div className="mb-2 flex items-center gap-3">
+                                                <EmployeeAvatar
+                                                    employee={emp}
+                                                    size="small"
+                                                />
+
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-[13px] font-medium tracking-[-0.005em] text-gray-900">
+                                                        {emp.firstName}{" "}
+                                                        {emp.lastName}
+                                                    </p>
+
+                                                    <p className="truncate text-[11px] text-gray-500">
+                                                        {emp.jobPosition ||
+                                                            emp.jobTitle ||
+                                                            "No position"}
+                                                    </p>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
+
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="truncate text-[11px] text-gray-500">
+                                                    {emp.department?.name ||
+                                                        "No dept"}
+                                                </span>
+
+                                                <span className="shrink-0 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[11px] text-indigo-600">
+                                                    {
+                                                        typeLabels[
+                                                            emp.employeeType
+                                                        ]
+                                                    }
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+
                                     {filtered.length === 0 && (
-                                        <p className="text-center text-gray-400 text-[13px] py-8">
+                                        <p className="py-8 text-center text-[13px] text-gray-400">
                                             No employees
                                         </p>
                                     )}
@@ -582,7 +726,10 @@ export default function EmployeeList() {
                 </div>
             )}
 
-            {/* Create modal — editing now happens on the dedicated employee page */}
+            {/* ============================================================
+                CREATE EMPLOYEE MODAL
+            ============================================================ */}
+
             {showModal && (
                 <EmployeeFormModal
                     employee={null}

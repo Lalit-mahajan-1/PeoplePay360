@@ -322,8 +322,41 @@ export default function Sidebar() {
                     onClick={onNavigate}
                     className={`flex items-center cursor-pointer hover:bg-blue-100/30 gap-2.5 rounded-[12px] p-1.5 ${collapsed ? "flex-col" : ""}`}
                 >
-                    <div className="w-9 h-9 shrink-0 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[13px] font-bold">
-                        {initials}
+                    <div
+                        className={`group relative shrink-0 overflow-hidden rounded-full border border-white bg-indigo-100 text-indigo-700 shadow-sm ${
+                            collapsed ? "h-9 w-9" : "h-9 w-9"
+                        }`}
+                    >
+                        {user?.employee?.avatarUrl ? (
+                            <img
+                                src={user.employee.avatarUrl}
+                                alt={
+                                    user.employee
+                                        ? `${user.employee.firstName || ""} ${
+                                              user.employee.lastName || ""
+                                          }`.trim()
+                                        : "Profile"
+                                }
+                                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                                onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                    const fallback = e.currentTarget
+                                        .nextElementSibling as HTMLElement | null;
+
+                                    if (fallback) {
+                                        fallback.style.display = "flex";
+                                    }
+                                }}
+                            />
+                        ) : null}
+
+                        <div
+                            className={`${
+                                user?.employee?.avatarUrl ? "hidden" : "flex"
+                            } h-full w-full items-center justify-center text-[12px] font-bold`}
+                        >
+                            {initials}
+                        </div>
                     </div>
                     {!collapsed && (
                         <div className="min-w-0 flex-1">
