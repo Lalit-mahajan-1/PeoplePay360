@@ -21,8 +21,8 @@ interface Employee {
     avatarUrl?: string;
     department?: Department;
     departmentId?: string;
-    jobPosition?: string;
-    jobTitle?: string;
+    jobProfile?: string;
+
     manager?: {
         id: string;
         firstName: string;
@@ -596,8 +596,7 @@ export default function EmployeeList() {
 
                                         {/* Position */}
                                         <td className="px-4 py-3 text-gray-700">
-                                            {emp.jobPosition ||
-                                                emp.jobTitle ||
+                                            {emp.jobProfile?.replace(/_/g, " ") ||
                                                 "—"}
                                         </td>
 
@@ -690,8 +689,7 @@ export default function EmployeeList() {
                                                     </p>
 
                                                     <p className="truncate text-[11px] text-gray-500">
-                                                        {emp.jobPosition ||
-                                                            emp.jobTitle ||
+                                                        {emp.jobProfile?.replace(/_/g, " ") ||
                                                             "No position"}
                                                     </p>
                                                 </div>

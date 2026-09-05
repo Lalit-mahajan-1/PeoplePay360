@@ -8,7 +8,7 @@ interface Employee {
   employeeCode: string;
   avatarUrl?: string;
   department?: { id: string; name: string };
-  jobPosition?: string;
+  jobProfile?: string;
 }
 
 interface User {

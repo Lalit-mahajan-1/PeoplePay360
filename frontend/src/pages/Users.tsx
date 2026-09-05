@@ -88,7 +88,7 @@ function UserFormModal({
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState<UserFormValues>({
         email: user?.email || "",
-        password: "",
+        password: user ? "" : "default123",
         role: user?.role || "EMPLOYEE",
         employeeId: user?.employeeId || "",
         isActive: user?.isActive ?? true,

@@ -48,7 +48,7 @@ export default function EmployeeFormModal({
     onSaved,
 }: Props) {
     const isEditing = !!employee;
-    const [departments, setDepartments] = useState<Department[]>([]);
+    const [departments] = useState<Department[]>([]);
     const [saving, setSaving] = useState(false);
 
     // Materialize on mount, mirror the same path on the way out (spatial consistency).
@@ -86,7 +86,7 @@ export default function EmployeeFormModal({
     });
 
     useEffect(() => {
-        fetchDepartments();
+
         if (employee) {
             setForm({
                 employeeCode: employee.employeeCode,
@@ -110,15 +110,6 @@ export default function EmployeeFormModal({
             });
         }
     }, [employee]);
-
-    const fetchDepartments = async () => {
-        try {
-            const res = await api.get("/employees/departments");
-            setDepartments(res.data.data);
-        } catch {
-            // silent
-        }
-    };
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
