@@ -265,7 +265,7 @@ export default function Sidebar() {
                             } ${
                                 active
                                     ? "bg-blue-600/10 text-blue-600"
-                                    : "text-gray-600 hover:text-gray-900 hover:bg-black/[0.04]"
+                                    : "text-gray-600 cursor-pointer hover:text-gray-900 cursor-pointer hover:bg-black/[0.04]"
                             }`}
                         >
                             <Icon
@@ -278,7 +278,7 @@ export default function Sidebar() {
                                         )}
 
                             {collapsed && (
-                                <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-[12px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 z-50">
+                                <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-[12px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-cursor-pointer hover:opacity-100 z-50">
                                     {item.label}
                                 </span>
                             )}
@@ -289,10 +289,10 @@ export default function Sidebar() {
 
             {/* Footer / User Profile & Logout */}
             <div
-                className={`shrink-0 border-t border-black/[0.06] p-3 ${collapsed ? "flex flex-col items-center gap-2" : ""}`}
+                className={`shrink-0 border-t border-amber-600/40 bg-[#f9f5f2] p-3 ${collapsed ? "flex flex-col items-center gap-2" : ""}`}
             >
                 <div
-                    className={`flex items-center gap-2.5 rounded-[12px] p-1.5 ${collapsed ? "flex-col" : ""}`}
+                    className={`flex items-center cursor-pointer hover:bg-blue-100/30 gap-2.5 rounded-[12px] p-1.5 ${collapsed ? "flex-col" : ""}`}
                 >
                     <div className="w-9 h-9 shrink-0 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[13px] font-bold">
                         {initials}
@@ -319,7 +319,7 @@ export default function Sidebar() {
                 <button
                     onClick={handleLogout}
                     title="Logout"
-                    className={`flex items-center gap-2.5 rounded-[12px] text-[13px] font-medium text-gray-500 transition-all duration-150 ease-out hover:text-red-600 hover:bg-red-500/10 active:scale-[0.97] ${
+                    className={`flex items-center gap-2.5 rounded-[12px] text-[13px] font-medium text-gray-500 transition-all duration-150 ease-out cursor-pointer cursor-pointer hover:text-red-600 cursor-pointer hover:bg-red-500/10 active:scale-[0.97] ${
                         collapsed
                             ? "justify-center w-9 h-9"
                             : "w-full px-3 py-2"
@@ -338,7 +338,7 @@ export default function Sidebar() {
             <div className="md:hidden sticky top-0 z-40 flex items-center gap-3 h-14 px-4 bg-white/80 backdrop-blur-xl border-b border-black/[0.06]">
                 <button
                     onClick={() => setMobileOpen(true)}
-                    className="p-2 -ml-2 text-gray-500 rounded-full transition-all duration-150 ease-out hover:bg-black/[0.05] active:scale-90"
+                    className="p-2 -ml-2 text-gray-500 rounded-full transition-all duration-150 ease-out cursor-pointer hover:bg-black/[0.05] active:scale-90"
                 >
                     <Menu className="w-5 h-5" />
                 </button>
