@@ -379,8 +379,9 @@ export class AttendanceService {
 
     if (filters.employeeId) where.employeeId = filters.employeeId;
     const employeeWhere: any = {};
-    if (filters.search?.trim()) {
-      const search = filters.search.trim();
+    const search = filters.search?.trim();
+    const searchIsDate = Boolean(search && /^\d{4}-\d{2}-\d{2}$/.test(search));
+    if (search && !searchIsDate) {
       employeeWhere.OR = [
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
@@ -392,6 +393,8 @@ export class AttendanceService {
 
     if (filters.date && /^\d{4}-\d{2}-\d{2}$/.test(filters.date)) {
       where.workDate = new Date(`${filters.date}T00:00:00.000Z`);
+    } else if (searchIsDate && search) {
+      where.workDate = new Date(`${search}T00:00:00.000Z`);
     }
 
     if (filters.from || filters.to) {
@@ -534,7 +537,7 @@ export class AttendanceService {
       data: {
         employeeId: data.employeeId,
         workDate,
-        status: 'ABSENT',
+        status: 'HOLIDAY',
         notes: data.notes.trim(),
         isManualEdit: true,
         correctedById: authUser.userId,
@@ -548,6 +551,23 @@ export class AttendanceService {
       userId: authUser.userId,
     });
     return record;
+  }
+
+  async delete(id: string, authUser: AuthUser) {
+    const existing = await prisma.attendance.findUnique({
+      where: { id },
+      include: { employee: { select: { firstName: true, lastName: true, employeeCode: true } } },
+    });
+    if (!existing) throw { status: 404, message: 'Attendance record not found' };
+
+    await prisma.attendance.delete({ where: { id } });
+    await createAuditLog({
+      action: 'DELETE',
+      module: 'ATTENDANCE',
+      recordId: id,
+      details: `Deleted attendance for ${existing.employee.firstName} ${existing.employee.lastName} (${existing.employee.employeeCode}) on ${existing.workDate.toISOString().slice(0, 10)}`,
+      userId: authUser.userId,
+    });
   }
 
   async closeDay(workDateInput: string | undefined, authUser: AuthUser) {

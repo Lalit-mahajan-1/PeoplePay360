@@ -8,6 +8,7 @@ import {
   getAllAttendance,
   getAttendanceById,
   correctAttendance,
+  deleteAttendance,
   bulkMarkAttendance,
   createMedicalAbsence,
   closeAttendanceDay,
@@ -66,6 +67,7 @@ router.put(
   validateCorrection,
   correctAttendance
 );
+router.delete('/:id', authorize(['ADMIN', 'HR_MANAGER']), deleteAttendance);
 router.post(
   '/bulk-mark',
   authorize(HR_ROLES),

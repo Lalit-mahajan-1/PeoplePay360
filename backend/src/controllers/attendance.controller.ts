@@ -195,6 +195,20 @@ export const bulkMarkAttendance = async (
     }
 };
 
+export const deleteAttendance = async (req: Request, res: Response): Promise<void> => {
+    try {
+        await attendanceService.delete(req.params.id as string, req.user!);
+        res.status(204).send();
+    } catch (error: any) {
+        if (error.status) {
+            res.status(error.status).json({ success: false, message: error.message });
+            return;
+        }
+        console.error('Error deleting attendance:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete attendance' });
+    }
+};
+
 export const createMedicalAbsence = async (req: Request, res: Response): Promise<void> => {
     try {
         const record = await attendanceService.createMedicalAbsence(req.body, req.user!);
