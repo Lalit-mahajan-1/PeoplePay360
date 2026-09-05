@@ -289,6 +289,7 @@ async function main() {
   await prisma.user.upsert({ where: { email: 'amit@peoplepay360.com' }, update: { employeeId: emp3.id }, create: { email: 'amit@peoplepay360.com', password: hrPass, role: 'HR_MANAGER', employeeId: emp3.id } });
   await prisma.user.upsert({ where: { email: 'kavita@peoplepay360.com' }, update: { employeeId: emp6.id }, create: { email: 'kavita@peoplepay360.com', password: prPass, role: 'HR_PAYROLL_USER', employeeId: emp6.id } });
   await prisma.user.upsert({ where: { email: 'nikhil@peoplepay360.com' }, update: { employeeId: emp7.id }, create: { email: 'nikhil@peoplepay360.com', password: prMgrPass, role: 'HR_PAYROLL_MANAGER', employeeId: emp7.id } });
+  await prisma.user.upsert({ where: { email: 'payroll@peoplepay360.com' }, update: { employeeId: emp7.id }, create: { email: 'payroll@peoplepay360.com', password: prPass, role: 'HR_PAYROLL_MANAGER', employeeId: emp7.id } });
   await prisma.user.upsert({ where: { email: 'rahul@peoplepay360.com' }, update: { employeeId: emp1.id }, create: { email: 'rahul@peoplepay360.com', password: empPass, role: 'EMPLOYEE', employeeId: emp1.id } });
   await prisma.user.upsert({ where: { email: 'priya@peoplepay360.com' }, update: { employeeId: emp2.id }, create: { email: 'priya@peoplepay360.com', password: empPass, role: 'EMPLOYEE', employeeId: emp2.id } });
   await prisma.user.upsert({ where: { email: 'sneha@peoplepay360.com' }, update: { employeeId: emp4.id }, create: { email: 'sneha@peoplepay360.com', password: empPass, role: 'EMPLOYEE', employeeId: emp4.id } });
@@ -445,12 +446,13 @@ async function main() {
 
   console.log('\n✅ Seed completed!');
   console.log('\n📧 Login Credentials:');
-  console.log('   Admin:              admin@peoplepay360.com / admin123');
-  console.log('   HR Manager:         amit@peoplepay360.com   / hr123456');
-  console.log('   Payroll User:       kavita@peoplepay360.com / payroll123');
-  console.log('   Payroll Manager:    nikhil@peoplepay360.com / prmgr123');
-  console.log('   Employee (Engineer):rahul@peoplepay360.com  / emp12345');
-  console.log('   Employee (Intern):  vikram@peoplepay360.com / emp12345');
+  console.log('   Admin:               admin@peoplepay360.com   / admin123');
+  console.log('   HR Manager:          amit@peoplepay360.com    / hr123456');
+  console.log('   Payroll User:        kavita@peoplepay360.com  / payroll123');
+  console.log('   Payroll Manager:     nikhil@peoplepay360.com  / prmgr123');
+  console.log('   HR Payroll Manager:  payroll@peoplepay360.com / payroll123');
+  console.log('   Employee (Engineer): rahul@peoplepay360.com   / emp12345');
+  console.log('   Employee (Intern):   vikram@peoplepay360.com  / emp12345');
   console.log('\n📊 Sample Data:');
   console.log(`   - ${allEmployees.length} Employees (Full-time, Intern, Part-time)`);
   console.log(`   - 2 Salary Structures (Regular + Intern) with 10 Salary Rules`);

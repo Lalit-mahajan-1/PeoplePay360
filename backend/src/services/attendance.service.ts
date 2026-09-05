@@ -62,9 +62,9 @@ export class AttendanceService {
     const employeeSchedule = contract?.workingSchedule
       ? null
       : await prisma.employee.findUnique({
-          where: { id: employeeId },
-          select: { workingSchedule: { include: { days: { where: { weekday } } } } },
-        });
+        where: { id: employeeId },
+        select: { workingSchedule: { include: { days: { where: { weekday } } } } },
+      });
     const schedule = contract?.workingSchedule || employeeSchedule?.workingSchedule;
     const scheduleDay = schedule?.days[0];
 
@@ -518,6 +518,118 @@ export class AttendanceService {
 
     return updated;
   }
+
+  // ──────────────────────────────────────────────
+  //  PAYROLL AGGREGATION (called by payroll engine)
+  // ──────────────────────────────────────────────
+
+  async getPayrollAggregation(
+    employeeId: string,
+    periodStart: Date,
+    periodEnd: Date
+  ) {
+    const records = await prisma.attendance.findMany({
+      where: {
+        employeeId,
+        workDate: { gte: periodStart, lte: periodEnd },
+      },
+    });
+
+    const workedHours = records.reduce(
+      (sum, r) => sum + r.workedMinutes, 0
+    ) / 60;
+
+    const overtimeHours = records.reduce(
+      (sum, r) => sum + r.overtimeMinutes, 0
+    ) / 60;
+
+    const lateRecords = records.filter((r) => r.status === 'LATE');
+    // Each late record: calculate how late based on schedule
+    // For simplicity, each LATE = 0.5 hr deduction unless corrected
+    const lateHours = lateRecords.length * 0.5;
+
+    const absentDays = records.filter(
+      (r) => r.status === 'ABSENT'
+    ).length;
+
+    const workedDays = records.filter(
+      (r) => ['PRESENT', 'LATE', 'HALF_DAY'].includes(r.status)
+    ).length;
+
+    const halfDays = records.filter(
+      (r) => r.status === 'HALF_DAY'
+    ).length;
+
+    const holidayHours = records
+      .filter((r) => r.status === 'HOLIDAY' && r.workedMinutes > 0)
+      .reduce((sum, r) => sum + r.workedMinutes, 0) / 60;
+
+    const missingCheckouts = records.filter(
+      (r) => r.checkIn && !r.checkOut
+    ).length;
+
+    // Calculate expected days from schedule
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+      select: { workingScheduleId: true },
+    });
+
+    let expectedDaysPerMonth = 0;
+    let expectedHoursPerMonth = 0;
+
+    if (employee?.workingScheduleId) {
+      const scheduleDays = await prisma.workingScheduleDay.findMany({
+        where: { workingScheduleId: employee.workingScheduleId },
+      });
+      const workingWeekdays = new Set(scheduleDays.map((d) => d.weekday));
+      const avgMinutesPerDay = scheduleDays.reduce((sum, d) => {
+        const start = d.startTime.getHours() * 60 + d.startTime.getMinutes();
+        const end = d.endTime.getHours() * 60 + d.endTime.getMinutes();
+        return sum + Math.max(0, end - start - d.breakMinutes);
+      }, 0) / Math.max(1, scheduleDays.length);
+
+      // Count working days in the period
+      for (
+        let d = new Date(periodStart);
+        d <= periodEnd;
+        d.setDate(d.getDate() + 1)
+      ) {
+        const wd = WEEKDAY_MAP[d.getDay()];
+        if (workingWeekdays.has(wd as any)) {
+          expectedDaysPerMonth++;
+        }
+      }
+
+      expectedHoursPerMonth = (expectedDaysPerMonth * avgMinutesPerDay) / 60;
+    } else {
+      // Default: Mon-Fri, 8 hrs/day
+      for (
+        let d = new Date(periodStart);
+        d <= periodEnd;
+        d.setDate(d.getDate() + 1)
+      ) {
+        const day = d.getDay();
+        if (day >= 1 && day <= 5) {
+          expectedDaysPerMonth++;
+        }
+      }
+      expectedHoursPerMonth = expectedDaysPerMonth * 8;
+    }
+
+    return {
+      workedHours: Math.round(workedHours * 100) / 100,
+      overtimeHours: Math.round(overtimeHours * 100) / 100,
+      lateHours: Math.round(lateHours * 100) / 100,
+      absentDays,
+      workedDays: workedDays + halfDays * 0.5,
+      holidayHours: Math.round(holidayHours * 100) / 100,
+      missingCheckouts,
+      expectedDaysPerMonth,
+      expectedHoursPerMonth: Math.round(expectedHoursPerMonth * 100) / 100,
+      totalRecords: records.length,
+    };
+  }
+
 
   async createMedicalAbsence(
     data: { employeeId: string; workDate: string; notes: string },

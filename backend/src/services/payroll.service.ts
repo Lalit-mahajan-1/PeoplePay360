@@ -1,361 +1,574 @@
 import prisma from '../lib/prisma';
 import { createAuditLog } from './audit.service';
 import { AuthUser } from '../middleware/auth.middleware';
-import { salaryService } from './salary.service';
+import { payrollInputsService } from './payroll-inputs.service';
+import { ruleEngine } from './rule-engine.service';
+import { PayrollWarningInput } from '../types';
 
 export class PayrollService {
-  // ========== PAYRUNS ==========
-  async getAllPayruns(filters: { status?: string; salaryStructureId?: string; departmentId?: string }) {
+  // ══════════════════════════════════════════════
+  //  PAYRUNS
+  // ══════════════════════════════════════════════
+
+  async getAllPayruns(filters: {
+    status?: string;
+    salaryStructureId?: string;
+    departmentId?: string;
+  }) {
     const where: any = {};
     if (filters.status) where.status = filters.status;
     if (filters.salaryStructureId) where.salaryStructureId = filters.salaryStructureId;
     if (filters.departmentId) where.departmentId = filters.departmentId;
 
-    const payruns = await prisma.payrun.findMany({
+    return prisma.payrun.findMany({
       where,
       include: {
-        salaryStructure: { select: { id: true, name: true, code: true } },
-        department: { select: { id: true, name: true, code: true } },
+        salaryStructure: { select: { id: true, name: true } },
+        department: { select: { id: true, name: true } },
         createdBy: { select: { id: true, email: true } },
-        _count: { select: { payslips: true, employees: true } },
+        _count: { select: { payslips: true, employees: true, warnings: true } },
       },
-      orderBy: [{ periodStart: 'desc' }, { createdAt: 'desc' }],
+      orderBy: { createdAt: 'desc' },
     });
-
-    return Promise.all(payruns.map(async (p) => {
-      const summary = await this.aggregatePayrunSummary(p.id);
-      return {
-        ...p,
-        payslipCount: p._count.payslips,
-        employeeCount: p._count.employees,
-        ...(summary as any),
-      };
-    }));
   }
 
   async getPayrunById(id: string) {
-    const payrun = await prisma.payrun.findUnique({
+    return prisma.payrun.findUnique({
       where: { id },
       include: {
-        salaryStructure: {
-          include: { rules: { orderBy: { sequence: 'asc' }, include: { salaryRule: true } } },
-        },
+        salaryStructure: { select: { id: true, name: true, code: true } },
         department: { select: { id: true, name: true } },
         createdBy: { select: { id: true, email: true } },
         employees: {
           include: {
             employee: {
               select: {
-                id: true, firstName: true, lastName: true, employeeCode: true,
-                email: true, status: true, bankName: true, bankAccountNo: true,
+                id: true,
+                employeeCode: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },
         },
         payslips: {
           include: {
-            employee: { select: { id: true, firstName: true, lastName: true, employeeCode: true, email: true } },
-            warnings: true,
+            employee: {
+              select: {
+                id: true,
+                employeeCode: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
-          orderBy: { employee: { lastName: 'asc' } },
+          orderBy: { employee: { firstName: 'asc' } },
         },
-        warnings: { orderBy: [{ severity: 'desc' }, { createdAt: 'desc' }] },
+        warnings: {
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
-    if (!payrun) return null;
-
-    const summary = await this.aggregatePayrunSummary(id);
-    return { ...payrun, ...summary };
   }
 
-  async getEligibleEmployeesForPayrun(salaryStructureId: string, periodStart: string, periodEnd: string, departmentId?: string) {
+  async getEligibleEmployeesForPayrun(
+    salaryStructureId: string,
+    periodStart: string,
+    periodEnd: string,
+    departmentId?: string
+  ) {
     const start = new Date(periodStart);
     const end = new Date(periodEnd);
 
-    const employees = await prisma.employee.findMany({
-      where: {
-        status: 'ACTIVE',
-        ...(departmentId ? {
-          contracts: {
-            some: {
-              departmentId,
-              status: 'ACTIVE',
-              salaryStructureId,
-              startDate: { lte: end },
-              OR: [{ endDate: null }, { endDate: { gte: start } }],
-            },
-          },
-        } : {}),
-        contracts: {
-          some: {
-            status: 'ACTIVE',
-            salaryStructureId,
-            startDate: { lte: end },
-            OR: [{ endDate: null }, { endDate: { gte: start } }],
-          },
+    // Find employees with active contracts linked to this salary structure
+    const where: any = {
+      status: 'ACTIVE',
+      contracts: {
+        some: {
+          status: 'ACTIVE',
+          salaryStructureId,
+          startDate: { lte: end },
+          OR: [{ endDate: { gte: start } }, { endDate: null }],
         },
       },
-      include: {
-        manager: { select: { id: true, firstName: true, lastName: true } },
+    };
+
+    if (departmentId) {
+      where.departmentId = departmentId;
+    }
+
+    const employees = await prisma.employee.findMany({
+      where,
+      select: {
+        id: true,
+        employeeCode: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        department: { select: { id: true, name: true } },
+        jobPosition: true,
         contracts: {
           where: {
             status: 'ACTIVE',
             salaryStructureId,
             startDate: { lte: end },
-            OR: [{ endDate: null }, { endDate: { gte: start } }],
+            OR: [{ endDate: { gte: start } }, { endDate: null }],
+          },
+          select: {
+            id: true,
+            wage: true,
+            currencyCode: true,
           },
           take: 1,
-          include: { department: true, workingSchedule: true },
         },
       },
-      orderBy: [{ employeeCode: 'asc' }],
+      orderBy: { firstName: 'asc' },
     });
 
-    return employees.map(e => ({
-      ...e,
-      activeContract: e.contracts[0] || null,
-      department: e.contracts[0]?.department || null,
+    return employees.map((emp) => ({
+      ...emp,
+      contract: emp.contracts[0] || null,
+      contracts: undefined,
     }));
   }
 
   async createPayrunStep1(data: any, authUser: AuthUser) {
     const { salaryStructureId, periodStart, periodEnd, departmentId } = data;
-    if (!salaryStructureId || !periodStart || !periodEnd) {
-      throw { status: 400, message: 'salaryStructureId, periodStart, periodEnd are required' };
+
+    const structure = await prisma.salaryStructure.findUnique({
+      where: { id: salaryStructureId },
+      include: {
+        rules: {
+          include: { salaryRule: true },
+          orderBy: { sequence: 'asc' },
+        },
+      },
+    });
+
+    if (!structure || !structure.isActive) {
+      throw { status: 400, message: 'Salary structure not found or inactive' };
     }
-    const eligible = await this.getEligibleEmployeesForPayrun(salaryStructureId, periodStart, periodEnd, departmentId);
+
+    const eligible = await this.getEligibleEmployeesForPayrun(
+      salaryStructureId,
+      periodStart,
+      periodEnd,
+      departmentId
+    );
+
     return {
-      salaryStructureId, periodStart, periodEnd, departmentId,
+      structure: {
+        id: structure.id,
+        name: structure.name,
+        rulesCount: structure.rules.length,
+        rules: structure.rules.map((r) => ({
+          code: r.salaryRule.code,
+          name: r.salaryRule.name,
+          category: r.salaryRule.category,
+          sequence: r.sequence,
+        })),
+      },
+      period: { start: periodStart, end: periodEnd },
       eligibleEmployees: eligible,
+      eligibleCount: eligible.length,
     };
   }
 
   async createPayrun(data: any, authUser: AuthUser) {
-    const { name, salaryStructureId, periodStart, periodEnd, departmentId, employeeIds, notes } = data;
-    if (!name || !salaryStructureId || !periodStart || !periodEnd || !employeeIds || employeeIds.length === 0) {
-      throw { status: 400, message: 'name, salaryStructureId, periodStart, periodEnd, and employeeIds are required' };
+    const { name, salaryStructureId, periodStart, periodEnd, departmentId, employeeIds } = data;
+
+    // Check duplicate name
+    const existing = await prisma.payrun.findUnique({ where: { name } });
+    if (existing) {
+      throw { status: 409, message: 'A payrun with this name already exists' };
     }
-    const periodStartDate = new Date(periodStart);
-    const periodEndDate = new Date(periodEnd);
+
     const payrun = await prisma.payrun.create({
       data: {
-        name, salaryStructureId, departmentId,
-        periodStart: periodStartDate, periodEnd: periodEndDate,
-        status: 'DRAFT', createdById: authUser.userId, notes,
-        employees: { create: employeeIds.map((eid: string) => ({ employeeId: eid })) },
+        name,
+        salaryStructureId,
+        departmentId: departmentId || null,
+        periodStart: new Date(periodStart),
+        periodEnd: new Date(periodEnd),
+        status: 'DRAFT',
+        createdById: authUser.userId,
+        employees: {
+          create: employeeIds.map((empId: string) => ({
+            employeeId: empId,
+          })),
+        },
       },
-      include: { employees: true, salaryStructure: true },
-    });
-
-    const warnings: any[] = [];
-    for (const empLink of payrun.employees) {
-      const emp = await prisma.employee.findUnique({ where: { id: empLink.employeeId } });
-      if (!emp?.bankName || !emp?.bankAccountNo) {
-        warnings.push({
-          payrunId: payrun.id, severity: 'WARNING' as const,
-          code: 'MISSING_BANK_DETAILS',
-          message: `Employee ${emp?.firstName} ${emp?.lastName} is missing bank details`,
-        });
-      }
-    }
-    if (warnings.length > 0) {
-      await prisma.payrollWarning.createMany({ data: warnings });
-    }
-
-    await createAuditLog({
-      action: 'CREATE', module: 'PAYRUN', recordId: payrun.id,
-      details: `Created payrun ${name} with ${employeeIds.length} employees for period ${periodStart} to ${periodEnd}`,
-      userId: authUser.userId,
-    });
-    return this.getPayrunById(payrun.id);
-  }
-
-  async computePayrun(id: string, authUser: AuthUser) {
-    const payrun = await prisma.payrun.findUnique({
-      where: { id },
       include: {
         employees: true,
+        _count: { select: { employees: true } },
+      },
+    });
+
+    await createAuditLog({
+      action: 'CREATE',
+      module: 'PAYRUN',
+      recordId: payrun.id,
+      details: `Created payrun "${name}" with ${employeeIds.length} employees`,
+      userId: authUser.userId,
+    });
+
+    return payrun;
+  }
+
+  // ══════════════════════════════════════════════
+  //  COMPUTE PAYRUN (THE MAIN ENGINE)
+  // ══════════════════════════════════════════════
+
+  async computePayrun(payrunId: string, authUser: AuthUser) {
+    const payrun = await prisma.payrun.findUnique({
+      where: { id: payrunId },
+      include: {
         salaryStructure: {
-          include: { rules: { orderBy: { sequence: 'asc' }, include: { salaryRule: true } } },
+          include: {
+            rules: {
+              include: { salaryRule: true },
+              orderBy: { sequence: 'asc' },
+            },
+          },
+        },
+        employees: {
+          include: {
+            employee: {
+              select: {
+                id: true,
+                employeeCode: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                bankName: true,
+                bankAccountNo: true,
+              },
+            },
+          },
         },
       },
     });
-    if (!payrun) throw { status: 404, message: 'Payrun not found' };
-    if (payrun.status === 'PAID') throw { status: 400, message: 'Cannot recompute a paid payrun' };
 
-    const existingPayslips = await prisma.payslip.findMany({ where: { payrunId: id } });
-    if (existingPayslips.length > 0) {
-      await prisma.payslipLine.deleteMany({ where: { payslipId: { in: existingPayslips.map(p => p.id) } } });
-      await prisma.payrollWarning.deleteMany({ where: { payslipId: { in: existingPayslips.map(p => p.id) } } });
-      await prisma.payslip.deleteMany({ where: { payrunId: id } });
+    if (!payrun) {
+      throw { status: 404, message: 'Payrun not found' };
     }
-    await prisma.payrollWarning.deleteMany({ where: { payrunId: id, payslipId: null } });
 
-    const payslipsData: any[] = [];
-    const allWarnings: any[] = [];
-    const periodDays = this.daysBetween(payrun.periodStart, payrun.periodEnd) + 1;
+    if (payrun.status === 'PAID') {
+      throw { status: 400, message: 'Cannot recompute a paid payrun' };
+    }
 
-    for (const link of payrun.employees) {
-      const employeeId = link.employeeId;
-      const contract = await prisma.contract.findFirst({
-        where: {
-          employeeId, status: 'ACTIVE',
-          salaryStructureId: payrun.salaryStructureId,
-          startDate: { lte: payrun.periodEnd },
-          OR: [{ endDate: null }, { endDate: { gte: payrun.periodStart } }],
-        },
-      });
+    const periodStart = payrun.periodStart;
+    const periodEnd = payrun.periodEnd;
+    const rules = payrun.salaryStructure.rules;
+    const allWarnings: PayrollWarningInput[] = [];
 
-      if (!contract) {
+    // Delete existing payslips & warnings if recomputing
+    await prisma.payslipLine.deleteMany({
+      where: { payslip: { payrunId } },
+    });
+    await prisma.payslip.deleteMany({ where: { payrunId } });
+    await prisma.payrollWarning.deleteMany({ where: { payrunId } });
+
+    // Process each employee
+    for (const pe of payrun.employees) {
+      const employee = pe.employee;
+
+      // ── Build payroll inputs ──
+      const inputs = await payrollInputsService.buildInputs(
+        employee.id,
+        periodStart,
+        periodEnd
+      );
+
+      if (!inputs) {
         allWarnings.push({
-          payrunId: id, severity: 'ERROR' as const,
+          payrunId,
+          severity: 'ERROR',
           code: 'NO_ACTIVE_CONTRACT',
-          message: `Employee ${employeeId} has no active contract for this period`,
+          message: `${employee.firstName} ${employee.lastName} (${employee.employeeCode}): No active contract found for this period`,
         });
         continue;
       }
 
-      const duplicate = await prisma.payslip.findFirst({
-        where: {
-          employeeId,
-          periodStart: { lte: payrun.periodEnd },
-          periodEnd: { gte: payrun.periodStart },
-          payrunId: { not: id },
+      // ── Detect warnings ──
+      if (!employee.bankAccountNo) {
+        allWarnings.push({
+          payrunId,
+          severity: 'WARNING',
+          code: 'NO_BANK_DETAILS',
+          message: `${employee.employeeName || employee.firstName}: Missing bank account details`,
+        });
+      }
+
+      if (inputs.missingCheckouts > 0) {
+        allWarnings.push({
+          payrunId,
+          severity: 'ERROR',
+          code: 'MISSING_CHECKOUT',
+          message: `${employee.firstName} ${employee.lastName}: ${inputs.missingCheckouts} missing checkout(s) in this period. Please correct attendance before finalizing.`,
+        });
+      }
+
+      if (inputs.absentDays > 3) {
+        allWarnings.push({
+          payrunId,
+          severity: 'INFO',
+          code: 'HIGH_ABSENTEEISM',
+          message: `${employee.firstName} ${employee.lastName}: ${inputs.absentDays} absent days this period`,
+        });
+      }
+
+      if (inputs.unpaidLeaveDays > 0) {
+        allWarnings.push({
+          payrunId,
+          severity: 'INFO',
+          code: 'UNPAID_LEAVE',
+          message: `${employee.firstName} ${employee.lastName}: ${inputs.unpaidLeaveDays} unpaid leave day(s) — salary will be deducted`,
+        });
+      }
+
+      // ── Execute Rule Engine ──
+      const result = ruleEngine.execute(inputs, rules);
+
+      // ── Create Payslip ──
+      const payslip = await prisma.payslip.create({
+        data: {
+          payrunId,
+          employeeId: employee.id,
+          contractId: inputs.contractId,
+          salaryStructureId: payrun.salaryStructureId,
+          periodStart,
+          periodEnd,
+          status: 'COMPUTED',
+          paymentStatus: 'PENDING',
+          workedDays: inputs.workedDays,
+          basicAmount: result.basicAmount,
+          allowanceAmount: result.allowanceAmount,
+          deductionAmount: result.deductionAmount,
+          grossAmount: result.grossAmount,
+          netAmount: result.netAmount,
+          computedAt: new Date(),
+          lines: {
+            create: result.lines.map((line) => ({
+              salaryRuleId: line.salaryRuleId,
+              code: line.code,
+              name: line.name,
+              category: line.category as any,
+              sequence: line.sequence,
+              amount: line.amount,
+              explanation: line.explanation,
+            })),
+          },
         },
       });
-      if (duplicate) {
-        allWarnings.push({
-          payrunId: id, severity: 'WARNING' as const, code: 'DUPLICATE_PAYSLIP',
-          message: `Employee ${employeeId} already has payslip for overlapping period`,
-        });
-      }
 
-      const workedDays = await this.calculateWorkedDays(employeeId, payrun.periodStart, payrun.periodEnd);
-      const computation = salaryService.computeSalaryLineItems(contract, payrun.salaryStructure, { workedDays, periodDays });
-
-      const payslipWarnings: any[] = [];
-      const emp = await prisma.employee.findUnique({ where: { id: employeeId } });
-      if (!emp?.bankName || !emp?.bankAccountNo) {
-        payslipWarnings.push({
-          severity: 'WARNING' as const, code: 'MISSING_BANK_DETAILS',
-          message: 'Missing bank details for payment processing',
-        });
+      // Attach payslip-level warnings
+      for (const w of allWarnings.filter((w) => !w.payslipId)) {
+        if (w.message.includes(employee.employeeCode) || w.message.includes(employee.firstName)) {
+          w.payslipId = payslip.id;
+        }
       }
-      if (workedDays < periodDays * 0.8) {
-        payslipWarnings.push({
-          severity: 'INFO' as const, code: 'LOW_ATTENDANCE',
-          message: `Worked ${workedDays} of ${periodDays} period days - proration applied`,
-        });
-      }
+    }
 
-      payslipsData.push({
-        payrunId: id, employeeId, contractId: contract.id,
-        salaryStructureId: payrun.salaryStructureId,
-        periodStart: payrun.periodStart, periodEnd: payrun.periodEnd,
-        status: 'COMPUTED', workedDays,
-        basicAmount: computation.basicAmount,
-        allowanceAmount: computation.allowanceAmount,
-        deductionAmount: computation.deductionAmount,
-        grossAmount: computation.grossAmount,
-        netAmount: computation.netAmount,
-        computedAt: new Date(),
-        lines: computation.lines,
-        warnings: payslipWarnings,
+    // ── Save all warnings ──
+    if (allWarnings.length > 0) {
+      await prisma.payrollWarning.createMany({
+        data: allWarnings.map((w) => ({
+          payrunId: w.payrunId || payrunId,
+          payslipId: w.payslipId || null,
+          severity: w.severity as any,
+          code: w.code,
+          message: w.message,
+        })),
       });
     }
 
-    for (const pData of payslipsData) {
-      const { lines, warnings: ws, ...payslipFields } = pData;
-      const payslip = await prisma.payslip.create({ data: payslipFields });
-      if (lines.length > 0) {
-        await prisma.payslipLine.createMany({
-          data: lines.map((l: any) => ({ ...l, payslipId: payslip.id })),
-        });
-      }
-      if (ws.length > 0) {
-        await prisma.payrollWarning.createMany({
-          data: ws.map((w: any) => ({ ...w, payslipId: payslip.id, payrunId: id })),
-        });
-      }
-    }
-
-    if (allWarnings.length > 0) {
-      await prisma.payrollWarning.createMany({ data: allWarnings });
-    }
-
+    // ── Update payrun status ──
     const updated = await prisma.payrun.update({
-      where: { id }, data: { status: 'COMPUTED', computedAt: new Date() },
+      where: { id: payrunId },
+      data: {
+        status: 'COMPUTED',
+        computedAt: new Date(),
+      },
+      include: {
+        payslips: {
+          include: {
+            employee: {
+              select: { employeeCode: true, firstName: true, lastName: true },
+            },
+            lines: { orderBy: { sequence: 'asc' } },
+          },
+        },
+        warnings: true,
+        _count: { select: { payslips: true, warnings: true } },
+      },
     });
 
     await createAuditLog({
-      action: 'COMPUTE', module: 'PAYRUN', recordId: id,
-      details: `Computed payrun ${updated.name} - generated ${payslipsData.length} payslips`,
+      action: 'COMPUTE',
+      module: 'PAYRUN',
+      recordId: payrunId,
+      details: `Computed ${updated.payslips.length} payslips with ${allWarnings.length} warnings`,
       userId: authUser.userId,
     });
-    return this.getPayrunById(id);
+
+    return updated;
   }
 
-  async validatePayrun(id: string, authUser: AuthUser) {
-    const payrun = await prisma.payrun.findUnique({ where: { id } });
+  // ══════════════════════════════════════════════
+  //  VALIDATE & PAID
+  // ══════════════════════════════════════════════
+
+  async validatePayrun(payrunId: string, authUser: AuthUser) {
+    const payrun = await prisma.payrun.findUnique({
+      where: { id: payrunId },
+      include: { warnings: { where: { isResolved: false } } },
+    });
+
     if (!payrun) throw { status: 404, message: 'Payrun not found' };
     if (payrun.status !== 'COMPUTED') {
       throw { status: 400, message: 'Payrun must be computed before validation' };
     }
-    const payslipCount = await prisma.payslip.count({ where: { payrunId: id } });
-    if (payslipCount === 0) throw { status: 400, message: 'No payslips generated for this payrun' };
 
-    await prisma.payrun.update({ where: { id }, data: { status: 'VALIDATED', validatedAt: new Date() } });
-    await prisma.payslip.updateMany({ where: { payrunId: id }, data: { status: 'VALIDATED', validatedAt: new Date() } });
+    const unresolvedErrors = payrun.warnings.filter(
+      (w) => w.severity === 'ERROR' && !w.isResolved
+    );
 
-    await createAuditLog({
-      action: 'VALIDATE', module: 'PAYRUN', recordId: id,
-      details: `Validated payrun with ${payslipCount} payslips`,
-      userId: authUser.userId,
+    if (unresolvedErrors.length > 0) {
+      throw {
+        status: 400,
+        message: `Cannot validate: ${unresolvedErrors.length} unresolved error(s). Please fix attendance/contract issues first.`,
+      };
+    }
+
+    const updated = await prisma.payrun.update({
+      where: { id: payrunId },
+      data: {
+        status: 'VALIDATED',
+        validatedAt: new Date(),
+      },
     });
-    return this.getPayrunById(id);
-  }
 
-  async markPayrunPaid(id: string, authUser: AuthUser) {
-    const payrun = await prisma.payrun.findUnique({ where: { id } });
-    if (!payrun) throw { status: 404, message: 'Payrun not found' };
-    if (payrun.status !== 'VALIDATED') throw { status: 400, message: 'Payrun must be validated first' };
-
-    await prisma.payrun.update({ where: { id }, data: { status: 'PAID', paidAt: new Date() } });
     await prisma.payslip.updateMany({
-      where: { payrunId: id },
-      data: { status: 'PAID', paidAt: new Date(), paymentStatus: 'PAID' },
+      where: { payrunId },
+      data: { status: 'VALIDATED', validatedAt: new Date() },
     });
 
-    const count = await prisma.payslip.count({ where: { payrunId: id } });
     await createAuditLog({
-      action: 'MARK_PAID', module: 'PAYRUN', recordId: id,
-      details: `Marked ${count} payslips as paid`,
+      action: 'VALIDATE',
+      module: 'PAYRUN',
+      recordId: payrunId,
+      details: 'Payrun validated',
       userId: authUser.userId,
     });
-    return this.getPayrunById(id);
+
+    return updated;
   }
 
-  // ========== PAYSLIPS ==========
+  async markPayrunPaid(payrunId: string, authUser: AuthUser) {
+    const payrun = await prisma.payrun.findUnique({ where: { id: payrunId } });
+
+    if (!payrun) throw { status: 404, message: 'Payrun not found' };
+    if (payrun.status !== 'VALIDATED') {
+      throw { status: 400, message: 'Payrun must be validated before marking as paid' };
+    }
+
+    const updated = await prisma.payrun.update({
+      where: { id: payrunId },
+      data: {
+        status: 'PAID',
+        paidAt: new Date(),
+      },
+    });
+
+    await prisma.payslip.updateMany({
+      where: { payrunId },
+      data: { status: 'PAID', paymentStatus: 'PAID', paidAt: new Date() },
+    });
+
+    await createAuditLog({
+      action: 'PAID',
+      module: 'PAYRUN',
+      recordId: payrunId,
+      details: 'Payrun marked as paid',
+      userId: authUser.userId,
+    });
+
+    return updated;
+  }
+
+  async sendPayslips(payrunId: string, authUser: AuthUser) {
+    const payslips = await prisma.payslip.findMany({
+      where: { payrunId },
+      include: {
+        employee: { select: { email: true, firstName: true, lastName: true } },
+      },
+    });
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const slip of payslips) {
+      try {
+        // In production: integrate with email service (SendGrid, SES, etc.)
+        // For now: create delivery record
+        await prisma.payslipDelivery.create({
+          data: {
+            payslipId: slip.id,
+            recipientEmail: slip.employee.email,
+            status: 'QUEUED',
+          },
+        });
+        sent++;
+      } catch {
+        failed++;
+      }
+    }
+
+    await createAuditLog({
+      action: 'SEND_PAYSLIPS',
+      module: 'PAYRUN',
+      recordId: payrunId,
+      details: `Sent ${sent} payslip emails, ${failed} failed`,
+      userId: authUser.userId,
+    });
+
+    return { sent, failed, total: payslips.length };
+  }
+
+  // ══════════════════════════════════════════════
+  //  PAYSLIPS
+  // ══════════════════════════════════════════════
+
   async getPayslipById(id: string) {
     return prisma.payslip.findUnique({
       where: { id },
       include: {
-        payrun: { select: { id: true, name: true, status: true } },
         employee: {
           select: {
-            id: true, firstName: true, lastName: true, employeeCode: true,
-            email: true, phone: true, address: true, city: true,
-            bankName: true, bankAccountNo: true, bankIFSC: true,
-            avatarUrl: true,
+            id: true,
+            employeeCode: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            bankName: true,
+            bankAccountNo: true,
+            department: { select: { id: true, name: true } },
           },
         },
         contract: {
-          include: { department: true, workingSchedule: { include: { days: true } } },
+          select: {
+            id: true,
+            contractNumber: true,
+            wage: true,
+            department: { select: { id: true, name: true } },
+          },
         },
-        salaryStructure: { select: { id: true, name: true, code: true } },
+        salaryStructure: { select: { id: true, name: true } },
+        payrun: { select: { id: true, name: true } },
         lines: { orderBy: { sequence: 'asc' } },
-        warnings: { orderBy: [{ severity: 'desc' }, { createdAt: 'asc' }] },
-        deliveries: true,
+        warnings: { orderBy: { createdAt: 'desc' } },
+        deliveries: { orderBy: { createdAt: 'desc' } },
       },
     });
   }
@@ -363,8 +576,12 @@ export class PayrollService {
   async getMyPayslips(employeeId: string) {
     return prisma.payslip.findMany({
       where: { employeeId },
-      include: { payrun: { select: { id: true, name: true } } },
-      orderBy: [{ periodStart: 'desc' }],
+      include: {
+        payrun: { select: { id: true, name: true } },
+        salaryStructure: { select: { id: true, name: true } },
+        lines: { orderBy: { sequence: 'asc' } },
+      },
+      orderBy: { periodStart: 'desc' },
     });
   }
 
@@ -372,74 +589,19 @@ export class PayrollService {
     return prisma.payslip.findMany({
       where: { payrunId },
       include: {
-        employee: { select: { id: true, firstName: true, lastName: true, employeeCode: true, email: true } },
+        employee: {
+          select: {
+            employeeCode: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        lines: { orderBy: { sequence: 'asc' } },
+        warnings: true,
       },
-      orderBy: [{ employee: { lastName: 'asc' } }],
+      orderBy: { employee: { firstName: 'asc' } },
     });
-  }
-
-  async sendPayslips(payrunId: string, authUser: AuthUser) {
-    const payslips = await prisma.payslip.findMany({
-      where: { payrunId, status: { in: ['VALIDATED', 'PAID'] } },
-      include: { employee: { select: { id: true, email: true, firstName: true, lastName: true } } },
-    });
-
-    const deliveries: any[] = [];
-    for (const ps of payslips) {
-      if (ps.employee.email) {
-        deliveries.push({
-          payslipId: ps.id,
-          recipientEmail: ps.employee.email,
-          status: 'SENT' as const,
-          sentAt: new Date(),
-        });
-      }
-    }
-    if (deliveries.length > 0) {
-      await prisma.payslipDelivery.createMany({ data: deliveries });
-    }
-
-    await createAuditLog({
-      action: 'SEND_PAYSLIPS', module: 'PAYRUN', recordId: payrunId,
-      details: `Queued delivery of ${deliveries.length} payslips via email`,
-      userId: authUser.userId,
-    });
-    return { sent: deliveries.length, total: payslips.length };
-  }
-
-  // ========== HELPERS ==========
-  private async aggregatePayrunSummary(payrunId: string) {
-    const payslips = await prisma.payslip.findMany({
-      where: { payrunId },
-      select: {
-        basicAmount: true, allowanceAmount: true, deductionAmount: true,
-        grossAmount: true, netAmount: true,
-      },
-    });
-    const sum = (key: string) => payslips.reduce((s: number, p: any) => s + Number(p[key] || 0), 0);
-    return {
-      totalBasic: Number(sum('basicAmount').toFixed(2)),
-      totalAllowances: Number(sum('allowanceAmount').toFixed(2)),
-      totalDeductions: Number(sum('deductionAmount').toFixed(2)),
-      totalGross: Number(sum('grossAmount').toFixed(2)),
-      totalNet: Number(sum('netAmount').toFixed(2)),
-      averageNet: payslips.length > 0 ? Number((sum('netAmount') / payslips.length).toFixed(2)) : 0,
-    };
-  }
-
-  private async calculateWorkedDays(employeeId: string, start: Date, end: Date) {
-    const records = await prisma.attendance.count({
-      where: {
-        employeeId,
-        workDate: { gte: start, lte: end },
-        status: { in: ['PRESENT', 'LATE', 'HALF_DAY'] },
-      },
-    });
-    return records;
-  }
-
-  private daysBetween(start: Date, end: Date) {
-    return Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
   }
 }
 

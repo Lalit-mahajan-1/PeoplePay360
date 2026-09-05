@@ -117,6 +117,24 @@ enum SalaryRuleComputation {
   FORMULA
 }
 
+enum SalaryRuleInputSource {
+  NONE
+  BASE_SALARY
+  BASIC
+  GROSS
+  NET
+  OVERTIME_HOURS
+  LATE_HOURS
+  ABSENT_DAYS
+  WORKED_HOURS
+  EXPECTED_HOURS
+  HOLIDAY_HOURS
+  PAID_LEAVE_DAYS
+  UNPAID_LEAVE_DAYS
+  WORKED_DAYS
+  EXPECTED_DAYS
+}
+
 enum PayrunStatus {
   DRAFT
   COMPUTED
@@ -430,6 +448,7 @@ model SalaryRule {
   code            String                @unique
   category        SalaryRuleCategory
   computationType SalaryRuleComputation
+  inputSource     SalaryRuleInputSource @default(NONE)
   fixedAmount     Decimal?              @db.Decimal(14, 2)
   percentage      Decimal?              @db.Decimal(7, 4)
   formula         String?
@@ -548,6 +567,7 @@ model PayslipLine {
   category     SalaryRuleCategory
   sequence     Int
   amount       Decimal            @db.Decimal(14, 2)
+  explanation  String?
 
   payslip    Payslip     @relation(fields: [payslipId], references: [id])
   salaryRule SalaryRule? @relation(fields: [salaryRuleId], references: [id])

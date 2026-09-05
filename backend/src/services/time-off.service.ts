@@ -12,6 +12,73 @@ export class TimeOffService {
     });
   }
 
+  // ──────────────────────────────────────────────
+  //  PAYROLL LEAVE AGGREGATION (called by payroll engine)
+  // ──────────────────────────────────────────────
+
+  async getPayrollLeaveAggregation(
+    employeeId: string,
+    periodStart: Date,
+    periodEnd: Date
+  ) {
+    const approvedRequests = await prisma.leaveRequest.findMany({
+      where: {
+        employeeId,
+        status: 'APPROVED',
+        startDate: { lte: periodEnd },
+        endDate: { gte: periodStart },
+      },
+      include: {
+        timeOffType: {
+          select: { id: true, name: true, isPaid: true, code: true },
+        },
+      },
+    });
+
+    let paidLeaveDays = 0;
+    let unpaidLeaveDays = 0;
+    let onLeaveDays = 0;
+
+    for (const req of approvedRequests) {
+      // Calculate overlapping days with the payroll period
+      const overlapStart = new Date(
+        Math.max(req.startDate.getTime(), periodStart.getTime())
+      );
+      const overlapEnd = new Date(
+        Math.min(req.endDate.getTime(), periodEnd.getTime())
+      );
+
+      const overlapDays =
+        Math.max(
+          0,
+          Math.round(
+            (overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)
+          )
+        ) + 1;
+
+      onLeaveDays += overlapDays;
+
+      if (req.timeOffType.isPaid) {
+        paidLeaveDays += overlapDays;
+      } else {
+        unpaidLeaveDays += overlapDays;
+      }
+    }
+
+    return {
+      paidLeaveDays,
+      unpaidLeaveDays,
+      onLeaveDays,
+      leaveDetails: approvedRequests.map((r) => ({
+        typeName: r.timeOffType.name,
+        isPaid: r.timeOffType.isPaid,
+        startDate: r.startDate,
+        endDate: r.endDate,
+        days: Number(r.requestedUnit),
+      })),
+    };
+  }
+
   async createTimeOffType(data: any, authUser: AuthUser) {
     const existingCode = await prisma.timeOffType.findUnique({ where: { code: data.code } });
     if (existingCode) throw { status: 409, message: 'Time off type code already exists' };

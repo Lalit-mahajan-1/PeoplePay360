@@ -49,6 +49,20 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
     );
 }
 
+function RoleGuard({
+    allowedRoles,
+    children,
+}: {
+    allowedRoles: string[];
+    children: React.ReactNode;
+}) {
+    const { user } = useAuth();
+    if (!user || !allowedRoles.includes(user.role)) {
+        return <Navigate to="/" replace />;
+    }
+    return <>{children}</>;
+}
+
 function HomeRoute() {
     const { user } = useAuth();
     if (user?.role === "EMPLOYEE") return <EmployeeDashboard />;
@@ -62,23 +76,23 @@ function AppRoutes() {
         <Routes>
             <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
             <Route path="/" element={<PrivateRoute><HomeRoute /></PrivateRoute>} />
-            <Route path="/users" element={<PrivateRoute><Users /></PrivateRoute>} />
-            <Route path="/employees/:id" element={<PrivateRoute><EmployeeDetail /></PrivateRoute>} />
+            <Route path="/users" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN"]}><Users /></RoleGuard></PrivateRoute>} />
+            <Route path="/employees/:id" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN", "HR_MANAGER", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"]}><EmployeeDetail /></RoleGuard></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><MyProfile /></PrivateRoute>} />
             <Route path="/attendance" element={<PrivateRoute><AttendancePage /></PrivateRoute>} />
             <Route path="/time-off" element={<PrivateRoute><MyLeaves /></PrivateRoute>} />
-            <Route path="/admin/time-off" element={<PrivateRoute><TimeOffManagementPage /></PrivateRoute>} />
+            <Route path="/admin/time-off" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN", "HR_MANAGER", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"]}><TimeOffManagementPage /></RoleGuard></PrivateRoute>} />
             <Route path="/payslips" element={<PrivateRoute><MyPayslips /></PrivateRoute>} />
             <Route path="/payslips/:id" element={<PrivateRoute><PayslipDetailPage /></PrivateRoute>} />
             <Route path="/directory" element={<PrivateRoute><TeamDirectory /></PrivateRoute>} />
-            <Route path="/admin/employees" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/admin/employees" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN", "HR_MANAGER", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"]}><Dashboard /></RoleGuard></PrivateRoute>} />
             <Route path="/settings" element={<PrivateRoute><AccountSettings /></PrivateRoute>} />
-            <Route path="/contracts" element={<PrivateRoute><ContractsPage /></PrivateRoute>} />
-            <Route path="/working-schedules" element={<PrivateRoute><WorkingSchedulesPage /></PrivateRoute>} />
-            <Route path="/salary" element={<PrivateRoute><SalaryStructuresPage /></PrivateRoute>} />
-            <Route path="/payroll" element={<PrivateRoute><PayrollPage /></PrivateRoute>} />
-            <Route path="/payroll/payruns/:id" element={<PrivateRoute><PayrunDetailPage /></PrivateRoute>} />
-            <Route path="/reports" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
+            <Route path="/contracts" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN", "HR_MANAGER", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"]}><ContractsPage /></RoleGuard></PrivateRoute>} />
+            <Route path="/working-schedules" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN", "HR_MANAGER", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"]}><WorkingSchedulesPage /></RoleGuard></PrivateRoute>} />
+            <Route path="/salary" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"]}><SalaryStructuresPage /></RoleGuard></PrivateRoute>} />
+            <Route path="/payroll" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"]}><PayrollPage /></RoleGuard></PrivateRoute>} />
+            <Route path="/payroll/payruns/:id" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"]}><PayrunDetailPage /></RoleGuard></PrivateRoute>} />
+            <Route path="/reports" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"]}><ReportsPage /></RoleGuard></PrivateRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );

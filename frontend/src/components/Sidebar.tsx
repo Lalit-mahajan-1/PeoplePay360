@@ -134,8 +134,8 @@ export default function Sidebar() {
         },
     ];
 
-    // Add HR & Admin management options if user has elevated role
-    const isAdminOrHR =
+    // Add HR & Payroll management options if user has elevated role
+    const isElevatedUser =
         user &&
         [
             "ADMIN",
@@ -143,7 +143,8 @@ export default function Sidebar() {
             "HR_PAYROLL_USER",
             "HR_PAYROLL_MANAGER",
         ].includes(user.role);
-    if (isAdminOrHR) {
+
+    if (isElevatedUser) {
         navSections.push({
             title: "HR ADMINISTRATION",
             items: [
@@ -171,12 +172,6 @@ export default function Sidebar() {
                     icon: ListChecks,
                     roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
                 },
-                {
-                    label: "User Management",
-                    path: "/users",
-                    icon: ShieldCheck,
-                    roles: ["ADMIN"],
-                },
             ],
         });
         navSections.push({
@@ -199,6 +194,20 @@ export default function Sidebar() {
                     path: "/reports",
                     icon: BarChart3,
                     roles: ["ADMIN", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
+                },
+            ],
+        });
+    }
+
+    if (user?.role === "ADMIN") {
+        navSections.push({
+            title: "SYSTEM ADMINISTRATION",
+            items: [
+                {
+                    label: "User Management",
+                    path: "/users",
+                    icon: ShieldCheck,
+                    roles: ["ADMIN"],
                 },
             ],
         });
