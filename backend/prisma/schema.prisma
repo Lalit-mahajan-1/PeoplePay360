@@ -223,11 +223,11 @@ model Employee {
   status       EmployeeStatus @default(ACTIVE)
   employeeType EmployeeType   @default(FULL_TIME)
 
-  address    String?
-  city       String?
-  state      String?
-  country    String?
-  postalCode String?
+  address      String?
+  city         String?
+  state        String?
+  country      String?
+  postalCode   String?
 
   bankName      String?
   bankAccountNo String?

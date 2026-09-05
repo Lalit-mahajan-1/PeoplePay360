@@ -170,12 +170,45 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: 'rahul@peoplepay360.com' },
-    update: {},
+    update: { employeeId: emp1.id },
     create: {
       email: 'rahul@peoplepay360.com',
       password: empPassword,
       role: 'EMPLOYEE',
       employeeId: emp1.id,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'priya@peoplepay360.com' },
+    update: { employeeId: emp2.id },
+    create: {
+      email: 'priya@peoplepay360.com',
+      password: empPassword,
+      role: 'EMPLOYEE',
+      employeeId: emp2.id,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'sneha@peoplepay360.com' },
+    update: { employeeId: emp4.id },
+    create: {
+      email: 'sneha@peoplepay360.com',
+      password: empPassword,
+      role: 'EMPLOYEE',
+      employeeId: emp4.id,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'employee@peoplepay360.com' },
+    update: { employeeId: emp5.id },
+    create: {
+      email: 'employee@peoplepay360.com',
+      password: empPassword,
+      role: 'EMPLOYEE',
+      employeeId: emp5.id,
     },
   });
 
