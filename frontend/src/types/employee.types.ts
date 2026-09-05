@@ -8,19 +8,12 @@ export interface EmployeeProfile {
   dateOfBirth: string | null;
   gender: string | null;
   avatarUrl: string | null;
-  department: {
-    id: string;
-    name: string;
-    code: string;
-  } | null;
-  jobPosition: string | null;
-  jobTitle: string | null;
+  jobProfile: 'EMPLOYEE' | 'HR_MANAGER' | 'HR_PAYROLL_USER' | 'HR_PAYROLL_MANAGER' | 'ADMIN';
   manager: {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
-    jobTitle: string | null;
   } | null;
   hireDate: string;
   status: string;

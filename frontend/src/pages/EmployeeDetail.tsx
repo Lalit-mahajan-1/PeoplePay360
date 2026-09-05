@@ -135,7 +135,7 @@ export default function EmployeeDetail() {
     const canDelete = hasRole(["ADMIN", "HR_PAYROLL_MANAGER"]);
 
     const [employee, setEmployee] = useState<Employee | null>(null);
-    const [departments, setDepartments] = useState<Department[]>([]);
+    const [departments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
     const [editMode, setEditMode] = useState(false);
@@ -231,20 +231,11 @@ export default function EmployeeDetail() {
         });
     };
 
-    const loadDepartments = async () => {
-        try {
-            const res = await api.get("/employees/departments");
-            setDepartments(res.data.data);
-        } catch {
-            // silent
-        }
-    };
-
     useEffect(() => {
         if (!id) return;
 
         loadEmployee();
-        loadDepartments();
+
         loadCounts();
 
         // eslint-disable-next-line react-hooks/exhaustive-deps

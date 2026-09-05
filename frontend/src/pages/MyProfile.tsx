@@ -21,7 +21,6 @@ import {
     Upload,
     Trash2,
     X,
-    Check,
     Mail,
     ShieldCheck,
     Landmark,
@@ -177,9 +176,9 @@ export default function MyProfile() {
             .join("");
     };
 
-    const jobTitle = profile?.jobPosition || profile?.jobTitle || "Employee";
+    const jobTitle = profile?.jobProfile?.replace(/_/g, " ") || "Employee";
 
-    const department = profile?.department?.name || "Department not assigned";
+    const department = jobTitle;
 
     const managerName = profile?.manager
         ? `${profile.manager.firstName || ""} ${
@@ -278,7 +277,7 @@ export default function MyProfile() {
                                     >
                                         {hasAvatar ? (
                                             <img
-                                                src={profile?.avatarUrl}
+                                                src={profile?.avatarUrl || undefined}
                                                 alt={`${getFullName()} profile`}
                                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                             />
@@ -339,7 +338,7 @@ export default function MyProfile() {
 
                                             <span className="inline-flex items-center gap-1.5">
                                                 <BriefcaseBusiness className="h-3.5 w-3.5" />
-                                                {profile?.department?.code ||
+                                                {profile?.jobProfile?.replace(/_/g, " ") ||
                                                     "—"}
                                             </span>
                                         </div>
@@ -431,9 +430,9 @@ export default function MyProfile() {
 
                                         <InfoItem
                                             icon={<Building2 />}
-                                            label="Department"
+                                            label="Job profile"
                                             value={
-                                                profile?.department?.name || "—"
+                                                profile?.jobProfile?.replace(/_/g, " ") || "—"
                                             }
                                         />
 
@@ -530,7 +529,7 @@ export default function MyProfile() {
                                         />
 
                                         <MiniInfo
-                                            label="Department"
+                                            label="Job profile"
                                             value={department}
                                         />
 
@@ -664,7 +663,7 @@ export default function MyProfile() {
                         {/* Image */}
                         <div className="flex min-h-[300px] items-center justify-center bg-slate-100 p-5 sm:min-h-[440px] sm:p-8">
                             <img
-                                src={profile?.avatarUrl}
+                                src={profile?.avatarUrl || undefined}
                                 alt={`${getFullName()} profile`}
                                 className="max-h-[55vh] max-w-full rounded-xl object-contain shadow-lg"
                             />
