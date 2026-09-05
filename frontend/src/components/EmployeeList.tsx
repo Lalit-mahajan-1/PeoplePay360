@@ -142,6 +142,8 @@ export default function EmployeeList() {
     const [showModal, setShowModal] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [draggedEmp, setDraggedEmp] = useState<Employee | null>(null);
+    const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
 
     const canCreate = hasRole([
         "ADMIN",
@@ -151,6 +153,47 @@ export default function EmployeeList() {
     ]);
 
     const openEmployee = (emp: Employee) => navigate(`/employees/${emp.id}`);
+
+    const handleStatusChange = async (
+        emp: Employee,
+        newStatus: "ACTIVE" | "INACTIVE" | "ARCHIVED"
+    ) => {
+        if (emp.status === newStatus) return;
+
+        const targetRole = emp.user?.role || "EMPLOYEE";
+        const isTargetStandardEmployee = targetRole === "EMPLOYEE";
+        const isAdmin = currentUser?.role === "ADMIN";
+        const canModify = isAdmin || isTargetStandardEmployee;
+
+        if (!canModify) {
+            toast.error("HR Managers can only change status for standard employees.");
+            return;
+        }
+
+        const oldStatus = emp.status;
+        setEmployees((prev) =>
+            prev.map((e) => (e.id === emp.id ? { ...e, status: newStatus } : e))
+        );
+
+        try {
+            if (newStatus === "ARCHIVED") {
+                await api.delete(`/employees/${emp.id}`);
+            } else {
+                await api.put(`/employees/${emp.id}`, { status: newStatus });
+            }
+            toast.success(`${emp.firstName} ${emp.lastName} moved to ${newStatus}`);
+        } catch (err: any) {
+            toast.error(
+                err.response?.data?.message ||
+                    `Failed to move employee to ${newStatus}`
+            );
+            setEmployees((prev) =>
+                prev.map((e) =>
+                    e.id === emp.id ? { ...e, status: oldStatus } : e
+                )
+            );
+        }
+    };
 
     const confirmDelete = async () => {
         if (!deleteTarget) return;
@@ -669,93 +712,168 @@ export default function EmployeeList() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     {["ACTIVE", "INACTIVE", "ARCHIVED"].map((status) => {
                         const filtered = employees.filter(
-                            (e) => e.status === status,
+                            (e) => e.status === status
                         );
-
                         const config = statusConfig[status];
+                        const isOver = dragOverStatus === status;
 
                         return (
                             <div
                                 key={status}
-                                className="rounded-[20px] border border-black/[0.04] bg-gray-50/70 p-4"
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.dataTransfer.dropEffect = "move";
+                                    if (dragOverStatus !== status) {
+                                        setDragOverStatus(status);
+                                    }
+                                }}
+                                onDragLeave={(e) => {
+                                    if (
+                                        !e.currentTarget.contains(
+                                            e.relatedTarget as Node
+                                        )
+                                    ) {
+                                        setDragOverStatus(null);
+                                    }
+                                }}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    setDragOverStatus(null);
+                                    if (
+                                        draggedEmp &&
+                                        draggedEmp.status !== status
+                                    ) {
+                                        handleStatusChange(
+                                            draggedEmp,
+                                            status as
+                                                | "ACTIVE"
+                                                | "INACTIVE"
+                                                | "ARCHIVED"
+                                        );
+                                    }
+                                }}
+                                className={`rounded-[20px] border transition-all duration-200 p-4 min-h-[360px] flex flex-col ${
+                                    isOver
+                                        ? "border-indigo-400 bg-indigo-50/60 ring-2 ring-indigo-500/20 shadow-md"
+                                        : "border-black/[0.04] bg-gray-50/70"
+                                }`}
                             >
-                                <div className="mb-4 flex items-center gap-2">
-                                    <span
-                                        className={`h-2 w-2 rounded-full ${config.color.replace(
-                                            "text-",
-                                            "bg-",
-                                        )}`}
-                                    />
+                                <div className="mb-4 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span
+                                            className={`h-2.5 w-2.5 rounded-full ${config.color.replace(
+                                                "text-",
+                                                "bg-"
+                                            )}`}
+                                        />
 
-                                    <h3 className="text-[13px] font-semibold tracking-[-0.005em] text-gray-900">
-                                        {status}
-                                    </h3>
+                                        <h3 className="text-[13px] font-bold tracking-tight text-gray-900">
+                                            {status}
+                                        </h3>
 
-                                    <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-gray-500 shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
-                                        {filtered.length}
+                                        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-gray-500 shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
+                                            {filtered.length}
+                                        </span>
+                                    </div>
+
+                                    <span className="text-[10px] font-medium text-gray-400">
+                                        Drop items here
                                     </span>
                                 </div>
 
-                                <div className="space-y-2">
-                                    {filtered.map((emp) => (
-                                        <div
-                                            key={emp.id}
-                                            onClick={() => openEmployee(emp)}
-                                            className="cursor-pointer rounded-[16px] border border-black/[0.05] bg-white p-4 transition-all duration-150 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.12)] active:scale-[0.98]"
-                                        >
-                                            <div className="mb-2 flex items-center gap-3">
-                                                <EmployeeAvatar
-                                                    employee={emp}
-                                                    size="small"
-                                                />
+                                <div className="space-y-2.5 flex-1">
+                                    {filtered.map((emp) => {
+                                        const targetRole =
+                                            emp.user?.role || "EMPLOYEE";
+                                        const isTargetStandardEmployee =
+                                            targetRole === "EMPLOYEE";
+                                        const isAdmin =
+                                            currentUser?.role === "ADMIN";
+                                        const canDrag =
+                                            isAdmin || isTargetStandardEmployee;
+                                        const isBeingDragged =
+                                            draggedEmp?.id === emp.id;
 
-                                                <div className="min-w-0">
-                                                    <p className="truncate text-[13px] font-medium tracking-[-0.005em] text-gray-900">
-                                                        {emp.firstName}{" "}
-                                                        {emp.lastName}
-                                                    </p>
+                                        return (
+                                            <div
+                                                key={emp.id}
+                                                draggable={canDrag}
+                                                onDragStart={(e) => {
+                                                    if (!canDrag) return;
+                                                    e.dataTransfer.setData(
+                                                        "text/plain",
+                                                        emp.id
+                                                    );
+                                                    e.dataTransfer.effectAllowed =
+                                                        "move";
+                                                    setDraggedEmp(emp);
+                                                }}
+                                                onDragEnd={() => {
+                                                    setDraggedEmp(null);
+                                                    setDragOverStatus(null);
+                                                }}
+                                                onClick={() => openEmployee(emp)}
+                                                className={`group rounded-[16px] border bg-white p-4 transition-all duration-150 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.12)] active:scale-[0.98] ${
+                                                    canDrag
+                                                        ? "cursor-grab active:cursor-grabbing"
+                                                        : "cursor-pointer"
+                                                } ${
+                                                    isBeingDragged
+                                                        ? "opacity-30 scale-95 border-dashed border-indigo-400 bg-indigo-50/20"
+                                                        : "border-black/[0.05]"
+                                                }`}
+                                            >
+                                                <div className="mb-2 flex items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <EmployeeAvatar
+                                                            employee={emp}
+                                                            size="small"
+                                                        />
 
-                                                    <p className="truncate text-[11px] text-gray-500">
-                                                        {emp.jobProfile?.replace(
-                                                            /_/g,
-                                                            " ",
-                                                        ) || "No position"}
-                                                    </p>
+                                                        <div className="min-w-0">
+                                                            <p className="truncate text-[13px] font-semibold tracking-[-0.005em] text-gray-900 group-hover:text-indigo-600 transition-colors">
+                                                                {emp.firstName}{" "}
+                                                                {emp.lastName}
+                                                            </p>
+
+                                                            <p className="truncate text-[11px] text-gray-500">
+                                                                {emp.jobProfile?.replace(
+                                                                    /_/g,
+                                                                    " "
+                                                                ) || "No position"}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {canDrag && (
+                                                        <span
+                                                            className="text-gray-300 group-hover:text-gray-400 transition-opacity text-xs font-mono select-none shrink-0"
+                                                            title="Drag card to move column"
+                                                        >
+                                                            :::
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            </div>
 
-                                            <div className="flex items-center justify-between gap-2 pt-2 border-t border-black/[0.04]">
-                                                <span className="shrink-0 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[11px] text-indigo-600 font-medium">
-                                                    {
-                                                        typeLabels[
-                                                            emp.employeeType
-                                                        ]
-                                                    }
-                                                </span>
+                                                <div className="flex items-center justify-between gap-2 pt-2 border-t border-black/[0.04]">
+                                                    <span className="shrink-0 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[11px] text-indigo-600 font-medium">
+                                                        {
+                                                            typeLabels[
+                                                                emp.employeeType
+                                                            ]
+                                                        }
+                                                    </span>
 
-                                                {(() => {
-                                                    const targetRole =
-                                                        emp.user?.role ||
-                                                        "EMPLOYEE";
-                                                    const isTargetStandardEmployee =
-                                                        targetRole === "EMPLOYEE";
-                                                    const isAdmin =
-                                                        currentUser?.role ===
-                                                        "ADMIN";
-                                                    const canDeleteThisEmp =
-                                                        (isAdmin || isTargetStandardEmployee) &&
-                                                        isTargetStandardEmployee;
-
-                                                    if (
-                                                        canDeleteThisEmp &&
-                                                        emp.status !== "ARCHIVED"
-                                                    ) {
-                                                        return (
+                                                    {canDrag &&
+                                                        emp.status !==
+                                                            "ARCHIVED" && (
                                                             <button
                                                                 type="button"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    setDeleteTarget(emp);
+                                                                    setDeleteTarget(
+                                                                        emp
+                                                                    );
                                                                 }}
                                                                 className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-red-600 hover:text-white transition cursor-pointer"
                                                                 title="Delete Employee"
@@ -763,19 +881,21 @@ export default function EmployeeList() {
                                                                 <Trash2 className="h-3 w-3" />
                                                                 Delete
                                                             </button>
-                                                        );
-                                                    }
-                                                    // Keep blank for all non-employee roles
-                                                    return null;
-                                                })()}
+                                                        )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
 
                                     {filtered.length === 0 && (
-                                        <p className="py-8 text-center text-[13px] text-gray-400">
-                                            No employees
-                                        </p>
+                                        <div className="py-12 text-center text-[13px] border border-dashed border-gray-200 rounded-xl bg-white/50 flex flex-col items-center justify-center space-y-1">
+                                            <p className="font-semibold text-gray-400">
+                                                No employees
+                                            </p>
+                                            <p className="text-[11px] text-gray-300">
+                                                Drag employee here to move
+                                            </p>
+                                        </div>
                                     )}
                                 </div>
                             </div>
