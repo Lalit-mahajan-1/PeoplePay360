@@ -136,7 +136,7 @@ export class TimeOffService {
   }
 
   async getMyAllocations(employeeId: string) {
-    const rawAllocs = await prisma.leaveAllocation.findMany({
+    let rawAllocs = await prisma.leaveAllocation.findMany({
       where: { employeeId, status: 'APPROVED' },
       include: {
         timeOffType: true,
@@ -144,6 +144,46 @@ export class TimeOffService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // Auto-create standard annual allocations if employee has no allocations assigned
+    if (rawAllocs.length === 0) {
+      const types = await prisma.timeOffType.findMany({ where: { isActive: true } });
+      const currentYear = new Date().getFullYear();
+      const validFrom = new Date(`${currentYear}-01-01`);
+      const validTo = new Date(`${currentYear}-12-31`);
+
+      const defaultQuotas: Record<string, number> = {
+        'Privilege / Annual Leave': 18,
+        'Casual Leave': 12,
+        'Sick Leave': 12,
+        'Compensatory Off': 6,
+      };
+
+      for (const t of types) {
+        const quota = defaultQuotas[t.name] ?? (t.unit === 'HOURS' ? 96 : 12);
+        await prisma.leaveAllocation.create({
+          data: {
+            employeeId,
+            timeOffTypeId: t.id,
+            allocated: quota,
+            consumed: 0,
+            validFrom,
+            validTo,
+            status: 'APPROVED',
+            notes: `Auto-assigned annual ${t.name} allowance`,
+          },
+        });
+      }
+
+      rawAllocs = await prisma.leaveAllocation.findMany({
+        where: { employeeId, status: 'APPROVED' },
+        include: {
+          timeOffType: true,
+          requests: { where: { status: { in: ['PENDING', 'APPROVED'] } }, select: { id: true, requestedUnit: true, status: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
 
     const map = new Map<string, any>();
     for (const a of rawAllocs) {
