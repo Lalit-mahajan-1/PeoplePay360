@@ -24,8 +24,15 @@ export const authenticate = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
+    let token: string | undefined;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.query.token && typeof req.query.token === 'string') {
+      token = req.query.token;
+    }
+
+    if (!token) {
       res.status(401).json({
         success: false,
         message: 'Access denied. No token provided.',
@@ -33,7 +40,6 @@ export const authenticate = async (
       return;
     }
 
-    const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
       userId: string;
       email: string;

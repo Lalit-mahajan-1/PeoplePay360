@@ -41,7 +41,8 @@ export default function PayslipDetailPage() {
     const deductions = (ps.lines || []).filter((l: any) => l.category === "DEDUCTION");
     const totals = (ps.lines || []).filter((l: any) => ["GROSS", "NET"].includes(l.category));
 
-    const printUrl = `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/payroll/payslips/${ps.id}/print`;
+    const token = localStorage.getItem('token');
+    const printUrl = `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/payroll/payslips/${ps.id}/print?token=${token}`;
 
     return (
         <div className="p-6 md:p-8 [font-family:-apple-system,BlinkMacSystemFont,'SF_Pro_Text','Inter',sans-serif] max-w-[1100px] mx-auto">

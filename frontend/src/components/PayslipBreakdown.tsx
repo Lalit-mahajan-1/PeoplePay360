@@ -83,7 +83,9 @@ export default function PayslipBreakdown({ payslip, onClose }: PayslipBreakdownP
     const netCalculated = Number(payslip.netAmount) || grossCalculated - deductionTotal;
 
     const handlePrint = () => {
-        const printUrl = `http://localhost:5000/api/payroll/payslips/${payslip.id}/print`;
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+        const printUrl = `${apiUrl}/payroll/payslips/${payslip.id}/print?token=${token}`;
         window.open(printUrl, '_blank');
     };
 

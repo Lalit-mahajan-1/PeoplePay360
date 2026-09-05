@@ -115,7 +115,8 @@ export default function MyPayslips() {
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-                                                        window.open(`${apiUrl}/reports/payslip/${ps.id}/print`, '_blank');
+                                                        const token = localStorage.getItem('token');
+                                                        window.open(`${apiUrl}/reports/payslip/${ps.id}/print?token=${token}`, '_blank');
                                                     }}
                                                     className="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition inline-flex items-center gap-1 cursor-pointer"
                                                     title="View PDF Statement"
