@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { getMyProfile, updateMyProfile } from '../api/employeeApi';
+import React, { useEffect, useRef, useState } from 'react';
+import { deleteMyAvatar, getMyProfile, updateMyProfile, uploadMyAvatar } from '../api/employeeApi';
 import type { EmployeeProfile } from '../types/employee.types';
 import ProfileCard from '../components/ProfileCard';
 import toast from 'react-hot-toast';
@@ -9,6 +9,8 @@ export default function MyProfile() {
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     phone: '',
     address: '',
@@ -50,6 +52,30 @@ export default function MyProfile() {
     }
   };
 
+  const handleAvatarUpload = async (file?: File) => {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) { toast.error('Choose a JPEG, PNG, WebP, or GIF image.'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Profile images must be 5 MB or smaller.'); return; }
+    setAvatarUploading(true);
+    try {
+      const response = await uploadMyAvatar(file);
+      setProfile(response.data.data);
+      toast.success('Profile image updated.');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to upload profile image.');
+    } finally { setAvatarUploading(false); }
+  };
+
+  const handleAvatarDelete = async () => {
+    setAvatarUploading(true);
+    try {
+      const response = await deleteMyAvatar();
+      setProfile(response.data.data);
+      toast.success('Profile image removed.');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to remove profile image.');
+    } finally { setAvatarUploading(false); }
+  };
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -89,6 +115,14 @@ export default function MyProfile() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
           {profile && <ProfileCard profile={profile} />}
+          <div className="mt-4 rounded-xl border border-gray-100 bg-white p-4">
+            <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(e) => { handleAvatarUpload(e.target.files?.[0]); e.target.value = ''; }} />
+            <p className="mb-3 text-xs text-gray-500">JPEG, PNG, WebP, or GIF · up to 5 MB</p>
+            <div className="flex gap-2">
+              <button type="button" disabled={avatarUploading} onClick={() => avatarInputRef.current?.click()} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-60">{avatarUploading ? 'Saving…' : profile?.avatarUrl ? 'Replace photo' : 'Upload photo'}</button>
+              {profile?.avatarUrl && <button type="button" disabled={avatarUploading} onClick={handleAvatarDelete} className="rounded-lg border px-3 py-2 text-xs font-medium text-red-600 disabled:opacity-60">Remove</button>}
+            </div>
+          </div>
         </div>
 
         <div className="lg:col-span-2 space-y-6">

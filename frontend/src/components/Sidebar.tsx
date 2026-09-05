@@ -79,7 +79,7 @@ export default function Sidebar() {
     };
 
     const initials = user?.employee
-        ? `${user.employee.firstName?.[0] || ''}${user.employee.lastName?.[0] || ''}`
+        ? `${user.employee.firstName?.[0] || ""}${user.employee.lastName?.[0] || ""}`
         : user?.email?.[0]?.toUpperCase() || "?";
 
     const navSections: NavSection[] = [
@@ -131,7 +131,14 @@ export default function Sidebar() {
     ];
 
     // Add HR & Admin management options if user has elevated role
-    const isAdminOrHR = user && ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"].includes(user.role);
+    const isAdminOrHR =
+        user &&
+        [
+            "ADMIN",
+            "HR_MANAGER",
+            "HR_PAYROLL_USER",
+            "HR_PAYROLL_MANAGER",
+        ].includes(user.role);
     if (isAdminOrHR) {
         navSections.push({
             title: "ADMINISTRATION",
@@ -140,7 +147,12 @@ export default function Sidebar() {
                     label: "Employees",
                     path: "/admin/employees",
                     icon: Users,
-                    roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
+                    roles: [
+                        "ADMIN",
+                        "HR_MANAGER",
+                        "HR_PAYROLL_USER",
+                        "HR_PAYROLL_MANAGER",
+                    ],
                 },
                 {
                     label: "User Management",
@@ -152,7 +164,12 @@ export default function Sidebar() {
                     label: "Contracts",
                     path: "/contracts",
                     icon: FileText,
-                    roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
+                    roles: [
+                        "ADMIN",
+                        "HR_MANAGER",
+                        "HR_PAYROLL_USER",
+                        "HR_PAYROLL_MANAGER",
+                    ],
                 },
                 {
                     label: "Payroll",
@@ -236,7 +253,9 @@ export default function Sidebar() {
             >
                 {navSections.map((section, sIdx) => {
                     const filteredItems = section.items.filter(
-                        (item) => !item.roles || (user && item.roles.includes(user.role))
+                        (item) =>
+                            !item.roles ||
+                            (user && item.roles.includes(user.role)),
                     );
 
                     if (filteredItems.length === 0) return null;
@@ -257,7 +276,9 @@ export default function Sidebar() {
                                         key={item.path}
                                         to={item.path}
                                         onClick={onNavigate}
-                                        title={collapsed ? item.label : undefined}
+                                        title={
+                                            collapsed ? item.label : undefined
+                                        }
                                         className={`group relative flex items-center gap-3 rounded-[12px] text-[13.5px] font-medium tracking-[-0.005em] transition-all duration-150 active:scale-[0.97] ${
                                             collapsed
                                                 ? "justify-center px-0 py-2.5"
@@ -274,7 +295,9 @@ export default function Sidebar() {
                                         />
 
                                         {!collapsed && (
-                                            <span className="truncate">{item.label}</span>
+                                            <span className="truncate">
+                                                {item.label}
+                                            </span>
                                         )}
 
                                         {collapsed && (
@@ -294,7 +317,9 @@ export default function Sidebar() {
             <div
                 className={`shrink-0 border-t border-amber-600/40 bg-[#f9f5f2] p-3 ${collapsed ? "flex flex-col items-center gap-2" : ""}`}
             >
-                <div
+                <Link
+                    to={"/profile"}
+                    onClick={onNavigate}
                     className={`flex items-center cursor-pointer hover:bg-blue-100/30 gap-2.5 rounded-[12px] p-1.5 ${collapsed ? "flex-col" : ""}`}
                 >
                     <div className="w-9 h-9 shrink-0 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[13px] font-bold">
@@ -317,7 +342,7 @@ export default function Sidebar() {
                             </span>
                         </div>
                     )}
-                </div>
+                </Link>
 
                 <button
                     onClick={handleLogout}
@@ -363,7 +388,9 @@ export default function Sidebar() {
                         onClick={(e) => e.stopPropagation()}
                         className="h-full w-72 max-w-[80vw] flex flex-col bg-white border-r shadow-2xl"
                     >
-                        <SidebarContent onNavigate={() => setMobileOpen(false)} />
+                        <SidebarContent
+                            onNavigate={() => setMobileOpen(false)}
+                        />
                     </aside>
                 </div>
             )}

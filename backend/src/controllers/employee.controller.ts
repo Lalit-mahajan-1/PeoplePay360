@@ -1,6 +1,14 @@
 import { Request, Response } from 'express';
 import { employeeService } from '../services/employee.service';
 import prisma from '../lib/prisma';
+import { avatarStorage } from '../services/avatar-storage.service';
+
+const getCurrentEmployeeId = async (req: Request): Promise<string | undefined> => {
+  if (req.user?.employeeId) return req.user.employeeId;
+  const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+  if (!user) return undefined;
+  return (await prisma.employee.findUnique({ where: { email: user.email }, select: { id: true } }))?.id;
+};
 
 // ──────────────────────────────────────────────
 // EMPLOYEE SELF-SERVICE CONTROLLERS (NEW)
@@ -216,5 +224,39 @@ export const createDepartment = async (req: Request, res: Response): Promise<voi
   } catch (error) {
     console.error('Error creating department:', error);
     res.status(500).json({ success: false, message: 'Failed to create department' });
+  }
+};
+export const uploadMyAvatar = async (req: Request, res: Response): Promise<void> => {
+  let uploadedUrl: string | undefined;
+  try {
+    const employeeId = await getCurrentEmployeeId(req);
+    if (!employeeId) { res.status(400).json({ success: false, message: 'No employee record linked to this account.' }); return; }
+    const existing = await employeeService.getMyProfile(employeeId);
+    const contentType = req.headers['content-type']?.split(';')[0].trim().toLowerCase() || '';
+    if (!Buffer.isBuffer(req.body)) throw { status: 400, message: 'Send the image as the request body.' };
+    uploadedUrl = await avatarStorage.upload(employeeId, req.body, contentType);
+    const updated = await employeeService.updateAvatar(employeeId, uploadedUrl, req.user!);
+    try { await avatarStorage.removeByPublicUrl(existing.avatarUrl); } catch (error) { console.error('Previous avatar cleanup failed:', error); }
+    res.json({ success: true, message: 'Profile image uploaded successfully.', data: updated });
+  } catch (error: any) {
+    if (uploadedUrl) try { await avatarStorage.removeByPublicUrl(uploadedUrl); } catch { }
+    if (error.status) { res.status(error.status).json({ success: false, message: error.message }); return; }
+    console.error('Error uploading profile image:', error);
+    res.status(500).json({ success: false, message: 'Failed to upload profile image.' });
+  }
+};
+
+export const deleteMyAvatar = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const employeeId = await getCurrentEmployeeId(req);
+    if (!employeeId) { res.status(400).json({ success: false, message: 'No employee record linked to this account.' }); return; }
+    const existing = await employeeService.getMyProfile(employeeId);
+    const updated = await employeeService.updateAvatar(employeeId, null, req.user!);
+    try { await avatarStorage.removeByPublicUrl(existing.avatarUrl); } catch (error) { console.error('Avatar storage cleanup failed:', error); }
+    res.json({ success: true, message: 'Profile image removed successfully.', data: updated });
+  } catch (error: any) {
+    if (error.status) { res.status(error.status).json({ success: false, message: error.message }); return; }
+    console.error('Error deleting profile image:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete profile image.' });
   }
 };
