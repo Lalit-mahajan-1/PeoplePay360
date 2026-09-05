@@ -56,6 +56,34 @@ export const dispatchPayslipsReport = async (req: Request, res: Response): Promi
   }
 };
 
+export const publishToPortalReport = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { payrunId } = req.body;
+    if (!payrunId) {
+      res.status(400).json({ success: false, message: 'payrunId is required' });
+      return;
+    }
+    const result = await reportsService.publishToPortal(payrunId, req.user!);
+    res.json({ success: true, data: result, message: `Published ${result.count} payslips to Employee Portal` });
+  } catch (e: any) {
+    handleError(res, e, 'publishing payslips to portal');
+  }
+};
+
+export const emailPayslipsReport = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { payrunId } = req.body;
+    if (!payrunId) {
+      res.status(400).json({ success: false, message: 'payrunId is required' });
+      return;
+    }
+    const result = await reportsService.emailPayslipsWithNodemailer(payrunId, req.user!);
+    res.json({ success: true, data: result, message: `Mailed ${result.sent} payslips via Nodemailer (${result.failed} failed)` });
+  } catch (e: any) {
+    handleError(res, e, 'emailing payslips via nodemailer');
+  }
+};
+
 function handleError(res: Response, error: any, context: string) {
   if (error.status) {
     res.status(error.status).json({ success: false, message: error.message });

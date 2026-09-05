@@ -16,6 +16,7 @@ import {
     Calendar,
     Layers,
     User,
+    Globe,
 } from 'lucide-react';
 import WarningPanel from '../components/WarningPanel';
 import PayslipBreakdown from '../components/PayslipBreakdown';
@@ -102,14 +103,27 @@ export default function PayrunDetail() {
         }
     };
 
-    const handleSendPayslips = async () => {
+    const handlePublishPortal = async () => {
         setActionLoading(true);
         try {
-            const res = await api.post(`/payroll/payruns/${id}/send`);
-            toast.success(`Payslips dispatched! Sent: ${res.data.data?.sent || 0}`);
+            const res = await api.post('/reports/publish-portal', { payrunId: id });
+            toast.success(res.data?.message || 'Published payslips to Employee Portal!');
             loadPayrun();
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to send payslips');
+            toast.error(err.response?.data?.message || 'Failed to publish payslips to portal');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleEmailNodemailer = async () => {
+        setActionLoading(true);
+        try {
+            const res = await api.post('/reports/send-email', { payrunId: id });
+            toast.success(res.data?.message || 'Mailed payslip PDFs via Nodemailer!');
+            loadPayrun();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to email payslips');
         } finally {
             setActionLoading(false);
         }
@@ -246,28 +260,46 @@ export default function PayrunDetail() {
                             )}
                             {canManagePayment && (
                                 <button
-                                    onClick={handleSendPayslips}
+                                    onClick={handlePublishPortal}
                                     disabled={actionLoading}
-                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer"
+                                    className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-sm"
                                 >
-                                    <Mail className="w-4 h-4" /> Dispatch Payslip Emails
+                                    <Globe className="w-4 h-4" /> Publish to Portal
+                                </button>
+                            )}
+                            {canManagePayment && (
+                                <button
+                                    onClick={handleEmailNodemailer}
+                                    disabled={actionLoading}
+                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-sm"
+                                >
+                                    <Mail className="w-4 h-4" /> Email PDF Payslips (Nodemailer)
                                 </button>
                             )}
                         </>
                     )}
 
                     {payrun.status === 'PAID' && (
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                             <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center gap-1.5">
                                 <CheckCircle2 className="w-4 h-4" /> Paid & Finalized
                             </span>
                             {canManagePayment && (
                                 <button
-                                    onClick={handleSendPayslips}
+                                    onClick={handlePublishPortal}
                                     disabled={actionLoading}
-                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer"
+                                    className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-sm"
                                 >
-                                    <Mail className="w-4 h-4" /> Send Payslip Emails
+                                    <Globe className="w-4 h-4" /> Publish to Portal
+                                </button>
+                            )}
+                            {canManagePayment && (
+                                <button
+                                    onClick={handleEmailNodemailer}
+                                    disabled={actionLoading}
+                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-sm"
+                                >
+                                    <Mail className="w-4 h-4" /> Email PDF Payslips (Nodemailer)
                                 </button>
                             )}
                         </div>

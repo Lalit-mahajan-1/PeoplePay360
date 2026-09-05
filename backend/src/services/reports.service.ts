@@ -534,9 +534,9 @@ export class ReportsService {
   }
 
   /**
-   * Dispatch payslips for a payrun so each employee receives their payslip into My Payslips portal.
+   * Publish payslips to the website portal so employees can view them under My Payslips.
    */
-  async dispatchPayslips(payrunId: string, authUser: AuthUser) {
+  async publishToPortal(payrunId: string, authUser: AuthUser) {
     const payrun = await prisma.payrun.findUnique({
       where: { id: payrunId },
       include: {
@@ -566,11 +566,85 @@ export class ReportsService {
       action: 'SEND_PAYSLIPS',
       module: 'REPORTS',
       recordId: payrunId,
-      details: `Dispatched ${count} payslips for payrun "${payrun.name}"`,
+      details: `Published ${count} payslips to Portal for payrun "${payrun.name}"`,
       userId: authUser.userId,
     });
 
-    return { success: true, count, payrunName: payrun.name };
+    return { success: true, count, payrunName: payrun.name, method: 'PORTAL' };
+  }
+
+  /**
+   * Mail payslips directly to employee emails using Nodemailer with attached HTML/PDF document.
+   */
+  async emailPayslipsWithNodemailer(payrunId: string, authUser: AuthUser) {
+    const { emailService } = await import('./email.service');
+
+    const payrun = await prisma.payrun.findUnique({
+      where: { id: payrunId },
+      include: {
+        payslips: {
+          include: {
+            employee: true,
+          },
+        },
+      },
+    });
+
+    if (!payrun) throw { status: 404, message: 'Payrun not found' };
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const payslip of payrun.payslips) {
+      try {
+        const html = await this.generatePayslipHTML(payslip.id);
+        const periodStr = `${payrun.periodStart.toISOString().slice(0, 10)} to ${payrun.periodEnd.toISOString().slice(0, 10)}`;
+        
+        await emailService.sendPayslipEmail({
+          to: payslip.employee.email,
+          employeeName: `${payslip.employee.firstName} ${payslip.employee.lastName}`,
+          employeeCode: payslip.employee.employeeCode,
+          periodName: periodStr,
+          htmlContent: html,
+        });
+
+        await prisma.payslipDelivery.create({
+          data: {
+            payslipId: payslip.id,
+            recipientEmail: payslip.employee.email,
+            status: 'SENT',
+          },
+        });
+        sent++;
+      } catch (err) {
+        console.error(`Failed to mail payslip ${payslip.id} to ${payslip.employee.email}:`, err);
+        await prisma.payslipDelivery.create({
+          data: {
+            payslipId: payslip.id,
+            recipientEmail: payslip.employee.email,
+            status: 'FAILED',
+          },
+        });
+        failed++;
+      }
+    }
+
+    await createAuditLog({
+      action: 'SEND_PAYSLIPS',
+      module: 'REPORTS',
+      recordId: payrunId,
+      details: `Mailed ${sent} payslip emails via Nodemailer (${failed} failed) for payrun "${payrun.name}"`,
+      userId: authUser.userId,
+    });
+
+    return { success: true, sent, failed, total: payrun.payslips.length, method: 'NODEMAILER' };
+  }
+
+  /**
+   * Dispatch payslips for a payrun (default fallback).
+   */
+  async dispatchPayslips(payrunId: string, authUser: AuthUser) {
+    return this.publishToPortal(payrunId, authUser);
   }
 }
 

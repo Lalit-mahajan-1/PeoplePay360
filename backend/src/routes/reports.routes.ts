@@ -4,6 +4,8 @@ import {
   getEmployeePayslipsReport,
   printPayslipReport,
   dispatchPayslipsReport,
+  publishToPortalReport,
+  emailPayslipsReport,
 } from '../controllers/reports.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { authorize } from '../middleware/role.middleware';
@@ -21,5 +23,7 @@ router.get('/employee-payslips', authorize(ALL_PAYROLL), getEmployeePayslipsRepo
 router.get('/payslip/:id/pdf', authorize(ALL_PAYROLL.concat('EMPLOYEE')), printPayslipReport);
 router.get('/payslip/:id/print', authorize(ALL_PAYROLL.concat('EMPLOYEE')), printPayslipReport);
 router.post('/dispatch-payslips', authorize(PAYROLL_MANAGER), dispatchPayslipsReport);
+router.post('/publish-portal', authorize(PAYROLL_MANAGER), publishToPortalReport);
+router.post('/send-email', authorize(PAYROLL_MANAGER), emailPayslipsReport);
 
 export default router;
