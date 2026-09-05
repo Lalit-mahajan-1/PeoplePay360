@@ -7,7 +7,6 @@ import {
     Clock,
     CalendarDays,
     Wallet,
-    Building2,
     Settings,
     ChevronLeft,
     ChevronRight,
@@ -128,16 +127,6 @@ export default function Sidebar() {
                     label: "My Payslips",
                     path: "/payslips",
                     icon: Wallet,
-                },
-            ],
-        },
-        {
-            title: "COMPANY (READ-ONLY)",
-            items: [
-                {
-                    label: "Team Directory",
-                    path: "/directory",
-                    icon: Building2,
                 },
             ],
         },
