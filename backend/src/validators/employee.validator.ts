@@ -6,7 +6,7 @@ export const validateCreateEmployee = (
   next: NextFunction
 ): void => {
   const errors: string[] = [];
-  const { employeeCode, firstName, lastName, email, employeeType, status, gender } = req.body;
+  const { employeeCode, firstName, lastName, email, employeeType, status, gender, jobProfile } = req.body;
 
   if (!employeeCode || typeof employeeCode !== 'string' || employeeCode.trim() === '') {
     errors.push('Employee code is required');
@@ -27,6 +27,11 @@ export const validateCreateEmployee = (
     if (!emailRegex.test(email)) {
       errors.push('Invalid email format');
     }
+  }
+
+  const validJobProfiles = ['ADMIN', 'HR_MANAGER', 'HR_PAYROLL_USER', 'HR_PAYROLL_MANAGER', 'EMPLOYEE'];
+  if (jobProfile && !validJobProfiles.includes(jobProfile)) {
+    errors.push('Job profile must be one of: ADMIN, HR_MANAGER, HR_PAYROLL_USER, HR_PAYROLL_MANAGER, EMPLOYEE');
   }
 
   const validTypes = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'];
@@ -62,13 +67,18 @@ export const validateUpdateEmployee = (
   next: NextFunction
 ): void => {
   const errors: string[] = [];
-  const { email, employeeType, status, gender } = req.body;
+  const { email, employeeType, status, gender, jobProfile } = req.body;
 
   if (email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       errors.push('Invalid email format');
     }
+  }
+
+  const validJobProfiles = ['ADMIN', 'HR_MANAGER', 'HR_PAYROLL_USER', 'HR_PAYROLL_MANAGER', 'EMPLOYEE'];
+  if (jobProfile && !validJobProfiles.includes(jobProfile)) {
+    errors.push('Job profile must be one of: ADMIN, HR_MANAGER, HR_PAYROLL_USER, HR_PAYROLL_MANAGER, EMPLOYEE');
   }
 
   const validTypes = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'];

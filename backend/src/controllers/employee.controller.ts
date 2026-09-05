@@ -198,7 +198,6 @@ export const getAllDepartments = async (_req: Request, res: Response): Promise<v
   try {
     const departments = await prisma.department.findMany({
       include: {
-        _count: { select: { employees: true } },
         parent: { select: { id: true, name: true } },
       },
       orderBy: { name: 'asc' },

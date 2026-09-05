@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import prisma from '../lib/prisma';
 import { createAuditLog } from './audit.service';
 import { AuthUser } from '../middleware/auth.middleware';
@@ -10,9 +11,7 @@ interface CreateEmployeeData {
   phone?: string;
   dateOfBirth?: string;
   gender?: string;
-  departmentId?: string;
-  jobPosition?: string;
-  jobTitle?: string;
+  jobProfile?: string;
   managerId?: string;
   hireDate?: string;
   status?: string;
@@ -36,14 +35,12 @@ export class EmployeeService {
 
   async getAll(filters: {
     status?: string;
-    departmentId?: string;
-    employeeType?: string;
+      employeeType?: string;
     search?: string;
   }) {
     const where: any = {};
 
     if (filters.status) where.status = filters.status;
-    if (filters.departmentId) where.departmentId = filters.departmentId;
     if (filters.employeeType) where.employeeType = filters.employeeType;
 
     if (filters.search) {
@@ -58,7 +55,6 @@ export class EmployeeService {
     const employees = await prisma.employee.findMany({
       where,
       include: {
-        department: true,
         manager: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
@@ -73,7 +69,6 @@ export class EmployeeService {
     const employee = await prisma.employee.findUnique({
       where: { id },
       include: {
-        department: true,
         manager: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
@@ -83,7 +78,6 @@ export class EmployeeService {
             firstName: true,
             lastName: true,
             email: true,
-            jobPosition: true,
           },
         },
       },
@@ -109,16 +103,6 @@ export class EmployeeService {
       throw { status: 409, message: 'Email already exists' };
     }
 
-    // Validate department exists
-    if (data.departmentId) {
-      const dept = await prisma.department.findUnique({
-        where: { id: data.departmentId },
-      });
-      if (!dept) {
-        throw { status: 400, message: 'Department not found' };
-      }
-    }
-
     // Validate manager exists
     if (data.managerId) {
       const mgr = await prisma.employee.findUnique({
@@ -129,6 +113,7 @@ export class EmployeeService {
       }
     }
 
+    const defaultPasswordHash = await bcrypt.hash('default123', 12);
     const employee = await prisma.employee.create({
       data: {
         employeeCode: data.employeeCode,
@@ -138,9 +123,8 @@ export class EmployeeService {
         phone: data.phone,
         dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
         gender: data.gender as any,
-        departmentId: data.departmentId,
-        jobPosition: data.jobPosition,
-        jobTitle: data.jobTitle,
+        jobProfile: (data.jobProfile as any) || 'EMPLOYEE',
+        password: defaultPasswordHash,
         managerId: data.managerId,
         hireDate: data.hireDate ? new Date(data.hireDate) : new Date(),
         status: (data.status as any) || 'ACTIVE',
@@ -156,7 +140,6 @@ export class EmployeeService {
         avatarUrl: data.avatarUrl,
       },
       include: {
-        department: true,
         manager: {
           select: { id: true, firstName: true, lastName: true },
         },
@@ -191,6 +174,9 @@ export class EmployeeService {
     }
 
     const updateData: any = { ...data };
+    delete updateData.departmentId;
+    delete updateData.jobTitle;
+    delete updateData.jobPosition;
     if (updateData.dateOfBirth) updateData.dateOfBirth = new Date(updateData.dateOfBirth);
     if (updateData.hireDate) updateData.hireDate = new Date(updateData.hireDate);
     if (updateData.email) updateData.email = updateData.email.toLowerCase().trim();
@@ -199,7 +185,6 @@ export class EmployeeService {
       where: { id },
       data: updateData,
       include: {
-        department: true,
         manager: {
           select: { id: true, firstName: true, lastName: true },
         },
@@ -245,16 +230,12 @@ export class EmployeeService {
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
       include: {
-        department: {
-          select: { id: true, name: true, code: true },
-        },
         manager: {
           select: {
             id: true,
             firstName: true,
             lastName: true,
             email: true,
-            jobTitle: true,
           },
         },
       },
@@ -311,9 +292,6 @@ export class EmployeeService {
       where: { id: employeeId },
       data: sanitized,
       include: {
-        department: {
-          select: { id: true, name: true, code: true },
-        },
         manager: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
@@ -336,7 +314,7 @@ export class EmployeeService {
     if (existing.status === 'ARCHIVED') throw { status: 403, message: 'Your account has been archived' };
     const updated = await prisma.employee.update({
       where: { id: employeeId }, data: { avatarUrl },
-      include: { department: { select: { id: true, name: true, code: true } }, manager: { select: { id: true, firstName: true, lastName: true, email: true } } },
+      include: { manager: { select: { id: true, firstName: true, lastName: true, email: true } } },
     });
     await createAuditLog({ action: avatarUrl ? 'UPLOAD' : 'DELETE', module: 'EMPLOYEE_AVATAR', recordId: employeeId, details: avatarUrl ? 'Uploaded profile image' : 'Removed profile image', userId: authUser.userId });
     return updated;

@@ -18,6 +18,14 @@ enum UserRole {
   ADMIN
 }
 
+enum JobProfile {
+  EMPLOYEE
+  HR_MANAGER
+  HR_PAYROLL_USER
+  HR_PAYROLL_MANAGER
+  ADMIN
+}
+
 enum EmployeeStatus {
   ACTIVE
   INACTIVE
@@ -191,7 +199,6 @@ model Department {
   parent   Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children Department[] @relation("DepartmentHierarchy")
 
-  employees Employee[]
   contracts Contract[]
   payruns   Payrun[]   @relation("PayrunDepartment")
 
@@ -211,10 +218,8 @@ model Employee {
   dateOfBirth  DateTime?
   gender       Gender?
 
-  departmentId String?
-  department   Department? @relation(fields: [departmentId], references: [id])
-  jobPosition  String?
-  jobTitle     String?
+  jobProfile JobProfile @default(EMPLOYEE)
+  password   String?
   managerId    String?
   manager      Employee?   @relation("ManagerSubordinates", fields: [managerId], references: [id])
   subordinates Employee[]  @relation("ManagerSubordinates")

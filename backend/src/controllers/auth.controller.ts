@@ -15,10 +15,11 @@ const generateToken = (user: { id: string; email: string; role: string }) => {
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, role, employeeId } = req.body;
+    const { email, role, employeeId } = req.body;
+    const password = req.body.password || 'default123';
 
-    if (!email || !password) {
-      res.status(400).json({ success: false, message: 'Email and password are required' });
+    if (!email) {
+      res.status(400).json({ success: false, message: 'Email is required' });
       return;
     }
 
@@ -47,6 +48,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
+
+    if (employeeId) {
+      await prisma.employee.update({
+        where: { id: employeeId },
+        data: { password: hashedPassword, jobProfile: (role || 'EMPLOYEE') as any },
+      });
+    }
 
     const user = await prisma.user.create({
       data: {
@@ -92,8 +100,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      res.status(400).json({ success: false, message: 'Email and password are required' });
+    if (!email) {
+      res.status(400).json({ success: false, message: 'Email is required' });
       return;
     }
 
@@ -164,8 +172,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
             lastName: true,
             employeeCode: true,
             avatarUrl: true,
-            department: { select: { id: true, name: true } },
-            jobPosition: true,
+            jobProfile: true,
           },
         },
         createdAt: true,

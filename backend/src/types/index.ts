@@ -9,6 +9,7 @@ export type {
 
 export {
   UserRole,
+  JobProfile,
   Gender,
   EmployeeStatus,
   EmployeeType,
@@ -32,7 +33,6 @@ export interface PaginationQuery {
 // ── Employee Filters ──
 export interface EmployeeFilters {
   status?: string;
-  departmentId?: string;
   employeeType?: string;
   search?: string;
 }

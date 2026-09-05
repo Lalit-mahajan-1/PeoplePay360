@@ -379,7 +379,6 @@ export class AttendanceService {
 
     if (filters.employeeId) where.employeeId = filters.employeeId;
     const employeeWhere: any = {};
-    if (filters.departmentId) employeeWhere.departmentId = filters.departmentId;
     if (filters.search?.trim()) {
       const search = filters.search.trim();
       employeeWhere.OR = [
@@ -413,7 +412,6 @@ export class AttendanceService {
               employeeCode: true,
               firstName: true,
               lastName: true,
-              department: { select: { id: true, name: true } },
             },
           },
           correctedBy: { select: { id: true, email: true } },
@@ -445,7 +443,6 @@ export class AttendanceService {
             firstName: true,
             lastName: true,
             email: true,
-            department: { select: { id: true, name: true } },
           },
         },
         correctedBy: { select: { id: true, email: true } },
