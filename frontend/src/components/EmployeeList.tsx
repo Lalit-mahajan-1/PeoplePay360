@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -64,15 +65,13 @@ function getAvatarStyle(id: string) {
 
 export default function EmployeeList() {
     const { hasRole } = useAuth();
+    const navigate = useNavigate();
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [view, setView] = useState<"list" | "kanban">("list");
     const [showModal, setShowModal] = useState(false);
-    const [editingEmployee, setEditingEmployee] = useState<Employee | null>(
-        null,
-    );
 
     const canCreate = hasRole([
         "ADMIN",
@@ -80,13 +79,8 @@ export default function EmployeeList() {
         "HR_PAYROLL_USER",
         "HR_PAYROLL_MANAGER",
     ]);
-    const canEdit = hasRole([
-        "ADMIN",
-        "HR_MANAGER",
-        "HR_PAYROLL_USER",
-        "HR_PAYROLL_MANAGER",
-    ]);
-    const canDelete = hasRole(["ADMIN", "HR_PAYROLL_MANAGER"]);
+
+    const openEmployee = (emp: Employee) => navigate(`/employees/${emp.id}`);
 
     const fetchEmployees = async () => {
         try {
@@ -112,30 +106,12 @@ export default function EmployeeList() {
         return () => clearTimeout(timer);
     }, [search, statusFilter]);
 
-    const handleDelete = async (emp: Employee) => {
-        if (!confirm(`Archive ${emp.firstName} ${emp.lastName}?`)) return;
-        try {
-            await api.delete(`/employees/${emp.id}`);
-            toast.success("Employee archived");
-            fetchEmployees();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || "Delete failed");
-        }
-    };
-
-    const handleEdit = (emp: Employee) => {
-        setEditingEmployee(emp);
-        setShowModal(true);
-    };
-
     const handleCreate = () => {
-        setEditingEmployee(null);
         setShowModal(true);
     };
 
     const handleModalClose = () => {
         setShowModal(false);
-        setEditingEmployee(null);
     };
 
     const handleSaved = () => {
@@ -453,11 +429,6 @@ export default function EmployeeList() {
                                 <th className="text-left px-4 py-3 font-semibold text-gray-500 tracking-[0.01em]">
                                     Hire Date
                                 </th>
-                                {(canEdit || canDelete) && (
-                                    <th className="text-right px-4 py-3 font-semibold text-gray-500 tracking-[0.01em]">
-                                        Actions
-                                    </th>
-                                )}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-black/[0.05]">
@@ -466,7 +437,8 @@ export default function EmployeeList() {
                                 return (
                                     <tr
                                         key={emp.id}
-                                        className="transition-colors duration-150 ease-out hover:bg-blue-50/50"
+                                        onClick={() => openEmployee(emp)}
+                                        className="cursor-pointer transition-colors duration-150 ease-out hover:bg-blue-50/50"
                                     >
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
@@ -522,66 +494,6 @@ export default function EmployeeList() {
                                                 year: "numeric",
                                             })}
                                         </td>
-                                        {(canEdit || canDelete) && (
-                                            <td className="px-4 py-3 text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    {canEdit && (
-                                                        <button
-                                                            onClick={() =>
-                                                                handleEdit(emp)
-                                                            }
-                                                            className="p-1.5 text-gray-400 rounded-full transition-all duration-150 ease-out hover:text-blue-600 hover:bg-blue-500/10 active:scale-90"
-                                                            title="Edit"
-                                                        >
-                                                            <svg
-                                                                className="w-4 h-4"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
-                                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                                />
-                                                            </svg>
-                                                        </button>
-                                                    )}
-                                                    {canDelete &&
-                                                        emp.status !==
-                                                            "ARCHIVED" && (
-                                                            <button
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        emp,
-                                                                    )
-                                                                }
-                                                                className="p-1.5 text-gray-400 rounded-full transition-all duration-150 ease-out hover:text-red-600 hover:bg-red-500/10 active:scale-90"
-                                                                title="Archive"
-                                                            >
-                                                                <svg
-                                                                    className="w-4 h-4"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        strokeWidth={
-                                                                            2
-                                                                        }
-                                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                                    />
-                                                                </svg>
-                                                            </button>
-                                                        )}
-                                                </div>
-                                            </td>
-                                        )}
                                     </tr>
                                 );
                             })}
@@ -614,45 +526,50 @@ export default function EmployeeList() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    {filtered.map((emp) => (
-                                        <div
-                                            key={emp.id}
-                                            onClick={() =>
-                                                canEdit && handleEdit(emp)
-                                            }
-                                            className="bg-white border border-black/[0.05] rounded-[16px] p-4 transition-all duration-150 ease-out hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
-                                        >
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center text-[12px] font-semibold">
-                                                    {emp.firstName[0]}
-                                                    {emp.lastName[0]}
+                                    {filtered.map((emp) => {
+                                        const avatar = getAvatarStyle(emp.id);
+                                        return (
+                                            <div
+                                                key={emp.id}
+                                                onClick={() =>
+                                                    openEmployee(emp)
+                                                }
+                                                className="bg-white border border-black/[0.05] rounded-[16px] p-4 transition-all duration-150 ease-out hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
+                                            >
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    <div
+                                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold ${avatar.bg} ${avatar.text}`}
+                                                    >
+                                                        {emp.firstName[0]}
+                                                        {emp.lastName[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium text-gray-900 text-[13px] tracking-[-0.005em]">
+                                                            {emp.firstName}{" "}
+                                                            {emp.lastName}
+                                                        </p>
+                                                        <p className="text-[11px] text-gray-500">
+                                                            {emp.jobPosition ||
+                                                                "No position"}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-medium text-gray-900 text-[13px] tracking-[-0.005em]">
-                                                        {emp.firstName}{" "}
-                                                        {emp.lastName}
-                                                    </p>
-                                                    <p className="text-[11px] text-gray-500">
-                                                        {emp.jobPosition ||
-                                                            "No position"}
-                                                    </p>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[11px] text-gray-500">
+                                                        {emp.department?.name ||
+                                                            "No dept"}
+                                                    </span>
+                                                    <span className="px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded-full text-[11px]">
+                                                        {
+                                                            typeLabels[
+                                                                emp.employeeType
+                                                            ]
+                                                        }
+                                                    </span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[11px] text-gray-500">
-                                                    {emp.department?.name ||
-                                                        "No dept"}
-                                                </span>
-                                                <span className="px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded-full text-[11px]">
-                                                    {
-                                                        typeLabels[
-                                                            emp.employeeType
-                                                        ]
-                                                    }
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                     {filtered.length === 0 && (
                                         <p className="text-center text-gray-400 text-[13px] py-8">
                                             No employees
@@ -665,10 +582,10 @@ export default function EmployeeList() {
                 </div>
             )}
 
-            {/* Modal */}
+            {/* Create modal — editing now happens on the dedicated employee page */}
             {showModal && (
                 <EmployeeFormModal
-                    employee={editingEmployee}
+                    employee={null}
                     onClose={handleModalClose}
                     onSaved={handleSaved}
                 />

@@ -4,6 +4,7 @@ import { Construction } from "lucide-react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import EmployeeDetail from "./pages/EmployeeDetail";
 import Sidebar from "./components/Sidebar";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -49,9 +50,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
             <Sidebar />
             {/* min-w-0 lets the content area shrink/scroll instead of pushing the sidebar off-screen */}
             <main className="flex-1 min-w-0 overflow-y-auto">
-                <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-[1600px]">
-                    {children}
-                </div>
+                <div className="">{children}</div>
             </main>
         </div>
     );
@@ -75,6 +74,14 @@ function AppRoutes() {
                 element={
                     <PrivateRoute>
                         <Dashboard />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/employees/:id"
+                element={
+                    <PrivateRoute>
+                        <EmployeeDetail />
                     </PrivateRoute>
                 }
             />

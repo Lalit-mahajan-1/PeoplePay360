@@ -131,7 +131,7 @@ export default function Sidebar() {
         <>
             {/* Brand */}
             <div
-                className={`flex items-center h-16 shrink-0 ${collapsed ? "justify-center px-0" : "justify-between px-4"}`}
+                className={`flex items-center bg-[#f9f5f2] h-16 shrink-0 ${collapsed ? "justify-center px-0" : "justify-between px-4"}`}
             >
                 <Link
                     to="/"
@@ -140,15 +140,17 @@ export default function Sidebar() {
                         collapsed ? "" : "min-w-0"
                     }`}
                 >
-                    {/* <div className="w-9 h-9 shrink-0 bg-blue-100/0 rounded-[11px] flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.08),0_4px_10px_rgba(37,99,235,0.25)]"> */}
-                    {/* <HiOutlineBuildingOffice2 className="w-5 h-5 text-white" /> */}
-                    <img src="/logo-name.png" className="w-45" alt="" />
-                    {/* </div> */}
+                    {collapsed ? (
+                        <img src="/logo.png" className="w-10" alt="" />
+                    ) : (
+                        <img src="/logo-name.png" className="w-45" alt="" />
+                    )}
+                    {/* <img src="/logo.png" className="w-10" alt="" /> */}
                 </Link>
                 {/* Desktop collapse toggle */}
                 <button
                     onClick={() => setCollapsed((c) => !c)}
-                    className={`hidden md:flex p-1.5 text-gray-400 rounded-full transition-all duration-150 ease-out hover:text-gray-700 hover:bg-black/[0.05] active:scale-90 ${
+                    className={`hidden md:flex p-1.5 text-gray-400 rounded-full transition-all duration-150 ease-out cursor-pointer hover:text-gray-700 cursor-pointer hover:bg-black/[0.05] active:scale-90 ${
                         collapsed
                             ? "absolute right-[-15px] top-5 z-50 bg-white border border-black/[0.08] shadow-[0_1px_4px_rgba(0,0,0,0.12)]"
                             : ""
@@ -164,7 +166,7 @@ export default function Sidebar() {
                 {/* Mobile close */}
                 <button
                     onClick={() => setMobileOpen(false)}
-                    className="md:hidden p-1.5 text-gray-400 rounded-full transition-all duration-150 ease-out hover:text-gray-700 hover:bg-black/[0.05] active:scale-90"
+                    className="md:hidden p-1.5 text-gray-400 rounded-full transition-all duration-150 ease-out cursor-pointer hover:text-gray-700 cursor-pointer hover:bg-black/[0.05] active:scale-90"
                 >
                     <X className="w-5 h-5" />
                 </button>
@@ -173,7 +175,7 @@ export default function Sidebar() {
             {/* Nav */}
             {/* Nav */}
             <nav
-                className={`flex-1 min-h-0 px-2.5 py-4 space-y-1 ${
+                className={`flex-1 bg-[#f9f5f2] border-t border-amber-600/40 min-h-0 px-2.5 py-4 space-y-1 ${
                     collapsed ? "overflow-hidden" : "overflow-y-auto"
                 }`}
             >
@@ -194,7 +196,7 @@ export default function Sidebar() {
                             } ${
                                 active
                                     ? "bg-blue-600/10 text-blue-600"
-                                    : "text-gray-600 hover:text-gray-900 hover:bg-black/[0.04]"
+                                    : "text-gray-600 cursor-pointer hover:text-gray-900 cursor-pointer hover:bg-black/[0.04]"
                             }`}
                         >
                             <Icon
@@ -207,7 +209,7 @@ export default function Sidebar() {
                             )}
 
                             {collapsed && (
-                                <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-[12px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 z-50">
+                                <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-[12px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-cursor-pointer hover:opacity-100 z-50">
                                     {item.label}
                                 </span>
                             )}
@@ -218,10 +220,10 @@ export default function Sidebar() {
 
             {/* User */}
             <div
-                className={`shrink-0 border-t border-black/[0.06] p-3 ${collapsed ? "flex flex-col items-center gap-2" : ""}`}
+                className={`shrink-0 border-t border-amber-600/40 bg-[#f9f5f2] p-3 ${collapsed ? "flex flex-col items-center gap-2" : ""}`}
             >
                 <div
-                    className={`flex items-center gap-2.5 rounded-[12px] p-1.5 ${collapsed ? "flex-col" : ""}`}
+                    className={`flex items-center cursor-pointer hover:bg-blue-100/30 gap-2.5 rounded-[12px] p-1.5 ${collapsed ? "flex-col" : ""}`}
                 >
                     <div className="w-9 h-9 shrink-0 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center text-[13px] font-semibold">
                         {initials}
@@ -247,7 +249,7 @@ export default function Sidebar() {
                 <button
                     onClick={handleLogout}
                     title="Logout"
-                    className={`flex items-center gap-2.5 rounded-[12px] text-[13px] font-medium text-gray-500 transition-all duration-150 ease-out hover:text-red-600 hover:bg-red-500/10 active:scale-[0.97] ${
+                    className={`flex items-center gap-2.5 rounded-[12px] text-[13px] font-medium text-gray-500 transition-all duration-150 ease-out cursor-pointer cursor-pointer hover:text-red-600 cursor-pointer hover:bg-red-500/10 active:scale-[0.97] ${
                         collapsed
                             ? "justify-center w-9 h-9"
                             : "w-full px-3 py-2 mt-1"
@@ -266,7 +268,7 @@ export default function Sidebar() {
             <div className="md:hidden sticky top-0 z-40 flex items-center gap-3 h-14 px-4 bg-white/80 backdrop-blur-xl border-b border-black/[0.06] [font-family:-apple-system,BlinkMacSystemFont,'SF_Pro_Text','Inter',sans-serif]">
                 <button
                     onClick={() => setMobileOpen(true)}
-                    className="p-2 -ml-2 text-gray-500 rounded-full transition-all duration-150 ease-out hover:bg-black/[0.05] active:scale-90"
+                    className="p-2 -ml-2 text-gray-500 rounded-full transition-all duration-150 ease-out cursor-pointer hover:bg-black/[0.05] active:scale-90"
                 >
                     <Menu className="w-5 h-5" />
                 </button>
