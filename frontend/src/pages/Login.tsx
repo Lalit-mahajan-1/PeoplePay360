@@ -26,45 +26,49 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-b from-[#f5f5f7] to-white flex items-center justify-center p-4 [font-family:-apple-system,BlinkMacSystemFont,'SF_Pro_Text','Inter',sans-serif]">
+      <div className="w-full max-w-[420px]">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
-            <span className="text-3xl">💼</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-[20px] mb-5 shadow-[0_2px_4px_rgba(0,0,0,0.06),0_12px_24px_rgba(37,99,235,0.28)]">
+            <span className="text-3xl leading-none">💼</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">PeoplePay360</h1>
-          <p className="text-gray-500 mt-1">HR & Payroll Platform</p>
+          <h1 className="text-[28px] font-semibold text-gray-900 tracking-[-0.02em] leading-tight">
+            PeoplePay360
+          </h1>
+          <p className="text-[15px] text-gray-500 mt-1 tracking-[-0.005em]">HR &amp; Payroll Platform</p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Sign in to your account</h2>
+        <div className="bg-white/80 backdrop-blur-xl rounded-[24px] border border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_20px_40px_-12px_rgba(0,0,0,0.12)] p-8">
+          <h2 className="text-[17px] font-semibold text-gray-900 tracking-[-0.01em] mb-6">
+            Sign in to your account
+          </h2>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-[13px] font-medium text-gray-600 mb-1.5 tracking-[-0.005em]">
                 Email address
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-gray-50/80 border border-black/[0.08] rounded-[12px] text-[15px] text-gray-900 outline-none transition-all duration-150 ease-out focus:bg-white focus:ring-4 focus:ring-blue-500/15 focus:border-blue-500/60"
                 placeholder="you@peoplepay360.com"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-[13px] font-medium text-gray-600 mb-1.5 tracking-[-0.005em]">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-gray-50/80 border border-black/[0.08] rounded-[12px] text-[15px] text-gray-900 outline-none transition-all duration-150 ease-out focus:bg-white focus:ring-4 focus:ring-blue-500/15 focus:border-blue-500/60"
                 placeholder="••••••••"
                 required
               />
@@ -73,7 +77,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 text-white font-semibold text-[15px] tracking-[-0.005em] py-3 px-4 rounded-[14px] transition-all duration-150 ease-out hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_16px_-4px_rgba(37,99,235,0.35)]"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -91,9 +95,11 @@ export default function Login() {
         </div>
 
         {/* Demo Credentials */}
-        <div className="mt-6 bg-white rounded-2xl border border-gray-100 p-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Demo Credentials</h3>
-          <div className="space-y-2">
+        <div className="mt-6 bg-white/70 backdrop-blur-xl rounded-[24px] border border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_12px_24px_-8px_rgba(0,0,0,0.08)] p-6">
+          <h3 className="text-[13px] font-semibold text-gray-900 tracking-[-0.005em] mb-3">
+            Demo Credentials
+          </h3>
+          <div className="space-y-1">
             {[
               { role: 'Admin', email: 'admin@peoplepay360.com', password: 'admin123' },
               { role: 'HR Manager', email: 'amit@peoplepay360.com', password: 'hr123456' },
@@ -105,13 +111,13 @@ export default function Login() {
                   setEmail(cred.email);
                   setPassword(cred.password);
                 }}
-                className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left group"
+                className="w-full flex items-center justify-between p-2.5 rounded-[12px] transition-all duration-150 ease-out hover:bg-black/[0.03] active:scale-[0.98] text-left group"
               >
                 <div>
-                  <span className="text-sm font-medium text-gray-900">{cred.role}</span>
-                  <span className="text-xs text-gray-500 ml-2">{cred.email}</span>
+                  <span className="text-[13px] font-medium text-gray-900 tracking-[-0.005em]">{cred.role}</span>
+                  <span className="text-[12px] text-gray-500 ml-2">{cred.email}</span>
                 </div>
-                <span className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-[12px] text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                   Use →
                 </span>
               </button>
