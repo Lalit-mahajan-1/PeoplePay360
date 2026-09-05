@@ -5,11 +5,6 @@ import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import EmployeeFormModal from "./EmployeeFormModal";
 
-interface Department {
-    id: string;
-    name: string;
-}
-
 interface Employee {
     id: string;
     employeeCode: string;
@@ -19,8 +14,6 @@ interface Employee {
     phone?: string;
     gender?: string;
     avatarUrl?: string;
-    department?: Department;
-    departmentId?: string;
     jobProfile?: string;
 
     manager?: {
@@ -28,6 +21,7 @@ interface Employee {
         firstName: string;
         lastName: string;
     };
+
     managerId?: string;
     hireDate: string;
     status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
@@ -210,12 +204,6 @@ export default function EmployeeList() {
         );
     }).length;
 
-    const departmentCount = new Set(
-        employees
-            .map((e) => e.department?.name)
-            .filter((name): name is string => Boolean(name)),
-    ).size;
-
     const stats = [
         {
             label: "Total Employees",
@@ -273,26 +261,6 @@ export default function EmployeeList() {
                         strokeLinejoin="round"
                         strokeWidth={2}
                         d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                    />
-                </svg>
-            ),
-        },
-        {
-            label: "Departments",
-            value: departmentCount,
-            accent: "teal",
-            icon: (
-                <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4m-4 6h.01M11 14h.01M7 10h.01M7 14h.01"
                     />
                 </svg>
             ),
@@ -443,7 +411,6 @@ export default function EmployeeList() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {/* View toggle */}
                     <div className="flex rounded-full bg-gray-100/80 p-1">
                         <button
                             type="button"
@@ -533,10 +500,6 @@ export default function EmployeeList() {
                                 </th>
 
                                 <th className="px-4 py-3 text-left font-semibold tracking-[0.01em] text-gray-500">
-                                    Department
-                                </th>
-
-                                <th className="px-4 py-3 text-left font-semibold tracking-[0.01em] text-gray-500">
                                     Position
                                 </th>
 
@@ -589,15 +552,12 @@ export default function EmployeeList() {
                                             </code>
                                         </td>
 
-                                        {/* Department */}
-                                        <td className="px-4 py-3 text-gray-700">
-                                            {emp.department?.name || "—"}
-                                        </td>
-
                                         {/* Position */}
                                         <td className="px-4 py-3 text-gray-700">
-                                            {emp.jobProfile?.replace(/_/g, " ") ||
-                                                "—"}
+                                            {emp.jobProfile?.replace(
+                                                /_/g,
+                                                " ",
+                                            ) || "—"}
                                         </td>
 
                                         {/* Type */}
@@ -689,18 +649,15 @@ export default function EmployeeList() {
                                                     </p>
 
                                                     <p className="truncate text-[11px] text-gray-500">
-                                                        {emp.jobProfile?.replace(/_/g, " ") ||
-                                                            "No position"}
+                                                        {emp.jobProfile?.replace(
+                                                            /_/g,
+                                                            " ",
+                                                        ) || "No position"}
                                                     </p>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="truncate text-[11px] text-gray-500">
-                                                    {emp.department?.name ||
-                                                        "No dept"}
-                                                </span>
-
+                                            <div className="flex items-center justify-end gap-2">
                                                 <span className="shrink-0 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[11px] text-indigo-600">
                                                     {
                                                         typeLabels[

@@ -259,7 +259,7 @@ export default function MyProfile() {
 
                         <div className="px-5 pb-5 sm:px-7 sm:pb-7">
                             <div className="-mt-12 flex flex-col gap-5 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
-                                <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                                <div className="flex flex-col gap-4 sm:flex-row ">
                                     {/* Avatar */}
                                     <button
                                         type="button"
@@ -277,7 +277,10 @@ export default function MyProfile() {
                                     >
                                         {hasAvatar ? (
                                             <img
-                                                src={profile?.avatarUrl || undefined}
+                                                src={
+                                                    profile?.avatarUrl ||
+                                                    undefined
+                                                }
                                                 alt={`${getFullName()} profile`}
                                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                             />
@@ -314,7 +317,7 @@ export default function MyProfile() {
                                     </button>
 
                                     {/* Employee identity */}
-                                    <div className="pb-1">
+                                    <div className="pb-1 mt-5">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <h2 className="text-xl font-semibold text-slate-900 sm:text-2xl">
                                                 {getFullName()}
@@ -330,7 +333,7 @@ export default function MyProfile() {
                                             {jobTitle}
                                         </p>
 
-                                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                                        {/* <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
                                             <span className="inline-flex items-center gap-1.5">
                                                 <Building2 className="h-3.5 w-3.5" />
                                                 {department}
@@ -338,10 +341,12 @@ export default function MyProfile() {
 
                                             <span className="inline-flex items-center gap-1.5">
                                                 <BriefcaseBusiness className="h-3.5 w-3.5" />
-                                                {profile?.jobProfile?.replace(/_/g, " ") ||
-                                                    "—"}
+                                                {profile?.jobProfile?.replace(
+                                                    /_/g,
+                                                    " ",
+                                                ) || "—"}
                                             </span>
-                                        </div>
+                                        </div> */}
                                     </div>
                                 </div>
 
@@ -428,13 +433,16 @@ export default function MyProfile() {
                                             value={jobTitle}
                                         />
 
-                                        <InfoItem
+                                        {/* <InfoItem
                                             icon={<Building2 />}
                                             label="Job profile"
                                             value={
-                                                profile?.jobProfile?.replace(/_/g, " ") || "—"
+                                                profile?.jobProfile?.replace(
+                                                    /_/g,
+                                                    " ",
+                                                ) || "—"
                                             }
-                                        />
+                                        /> */}
 
                                         <InfoItem
                                             icon={<UserRound />}
@@ -506,7 +514,7 @@ export default function MyProfile() {
                             ================================================== */}
                             <div className="space-y-6">
                                 {/* Quick profile card */}
-                                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                                {/* <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                                     <div className="flex items-center gap-3">
                                         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
                                             <User className="h-4 w-4" />
@@ -538,7 +546,7 @@ export default function MyProfile() {
                                             value={managerName}
                                         />
                                     </div>
-                                </section>
+                                </section> */}
 
                                 {/* Banking */}
                                 <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -601,7 +609,7 @@ export default function MyProfile() {
                     {/* =====================================================
                         PHOTO FOOTER NOTE
                     ====================================================== */}
-                    {!isEditing && (
+                    {/* {!isEditing && (
                         <div className="flex flex-col gap-2 rounded-xl border border-dashed border-slate-200 bg-white/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-xs text-slate-500">
                                 Keep your profile information up to date so your
@@ -617,7 +625,7 @@ export default function MyProfile() {
                                 <ChevronRight className="h-3.5 w-3.5" />
                             </button>
                         </div>
-                    )}
+                    )} */}
                 </div>
             </div>
 
