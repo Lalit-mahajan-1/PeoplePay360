@@ -18,7 +18,10 @@ router.use(authenticate);
 
 // Employee payslip self-service
 router.get('/payslips/mine', authorize(ALL_ROLES), getMyPayslips);
+router.get('/payslips/my', authorize(ALL_ROLES), getMyPayslips);
+router.get('/payslips/me', authorize(ALL_ROLES), getMyPayslips);
 router.get('/payslips/:id/print', authorize(ALL_PAYROLL.concat('EMPLOYEE')), printPayslip);
+router.get('/payslips/:id/pdf', authorize(ALL_PAYROLL.concat('EMPLOYEE')), printPayslip);
 router.get('/payslips/:id', authorize(ALL_PAYROLL.concat('EMPLOYEE')), getPayslipById);
 
 // Payrun eligible employees preview

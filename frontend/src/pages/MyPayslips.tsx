@@ -110,15 +110,28 @@ export default function MyPayslips() {
                                         </td>
 
                                         <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedPayslip(ps);
-                                                }}
-                                                className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition inline-flex items-center gap-1 cursor-pointer"
-                                            >
-                                                View Breakdown <ArrowRight className="w-3 h-3" />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                                                        window.open(`${apiUrl}/reports/payslip/${ps.id}/print`, '_blank');
+                                                    }}
+                                                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition inline-flex items-center gap-1 cursor-pointer"
+                                                    title="View PDF Statement"
+                                                >
+                                                    <Printer className="w-3.5 h-3.5" /> PDF
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedPayslip(ps);
+                                                    }}
+                                                    className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition inline-flex items-center gap-1 cursor-pointer"
+                                                >
+                                                    View Breakdown <ArrowRight className="w-3 h-3" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

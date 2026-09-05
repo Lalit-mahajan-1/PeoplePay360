@@ -12,6 +12,7 @@ import {
   getAllDepartments,
   createDepartment,
 } from '../controllers/employee.controller';
+import { getMyPayslips } from '../controllers/payroll.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { authorize } from '../middleware/role.middleware';
 import {
@@ -50,6 +51,12 @@ router.delete(
   '/me/avatar',
   authorize(['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER', 'ADMIN']),
   deleteMyAvatar
+);
+
+router.get(
+  '/me/payslips',
+  authorize(['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER', 'ADMIN']),
+  getMyPayslips
 );
 
 // ──────────────────────────────────────────────
