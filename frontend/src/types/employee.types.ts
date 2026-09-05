@@ -37,27 +37,57 @@ export interface AttendanceRecord {
   status: string;
 }
 
+export interface TimeOffType {
+  id: string;
+  name: string;
+  code: string;
+  isPaid: boolean;
+  requiresAllocation: boolean;
+  requiresApproval: boolean;
+  unit: string;
+  isActive: boolean;
+}
+
 export interface LeaveBalance {
   id: string;
-  leaveType: {
+  allocated?: number;
+  consumed?: number;
+  pending?: number;
+  taken?: number;
+  remaining?: number;
+  validFrom?: string;
+  validTo?: string | null;
+  timeOffType?: TimeOffType;
+  // Legacy / fallback fields
+  leaveType?: {
     name: string;
-    code: string;
+    code?: string;
   };
-  totalDays: number;
-  usedDays: number;
-  pendingDays: number;
-  year: number;
+  totalDays?: number;
+  usedDays?: number;
+  pendingDays?: number;
+  year?: number;
 }
 
 export interface LeaveRequest {
   id: string;
-  leaveType: { name: string };
+  timeOffTypeId?: string;
   startDate: string;
   endDate: string;
-  totalDays: number;
-  reason: string | null;
-  status: string;
+  requestedUnit?: number;
+  reason?: string | null;
+  status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REFUSED' | 'CANCELLED';
+  timeOffType?: TimeOffType;
+  reviewer?: {
+    id: string;
+    email: string;
+    name?: string | null;
+  } | null;
+  reviewNotes?: string | null;
   createdAt: string;
+  // Legacy / fallback fields
+  leaveType?: { name: string };
+  totalDays?: number;
 }
 
 export interface Payslip {

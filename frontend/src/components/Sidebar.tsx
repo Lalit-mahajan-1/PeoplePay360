@@ -86,6 +86,15 @@ export default function Sidebar() {
         ? `${user.employee.firstName?.[0] || ""}${user.employee.lastName?.[0] || ""}`
         : user?.email?.[0]?.toUpperCase() || "?";
 
+    const isElevatedUser =
+        user &&
+        [
+            "ADMIN",
+            "HR_MANAGER",
+            "HR_PAYROLL_USER",
+            "HR_PAYROLL_MANAGER",
+        ].includes(user.role);
+
     const navSections: NavSection[] = [
         {
             title: "OVERVIEW",
@@ -111,8 +120,8 @@ export default function Sidebar() {
                     icon: Clock,
                 },
                 {
-                    label: "Time Off / Leaves",
-                    path: "/time-off",
+                    label: isElevatedUser ? "My Personal Leaves" : "Time Off / Leaves",
+                    path: isElevatedUser ? "/my-leaves" : "/time-off",
                     icon: CalendarDays,
                 },
                 {
@@ -133,16 +142,6 @@ export default function Sidebar() {
             ],
         },
     ];
-
-    // Add HR & Payroll management options if user has elevated role
-    const isElevatedUser =
-        user &&
-        [
-            "ADMIN",
-            "HR_MANAGER",
-            "HR_PAYROLL_USER",
-            "HR_PAYROLL_MANAGER",
-        ].includes(user.role);
 
     if (isElevatedUser) {
         navSections.push({
@@ -167,7 +166,7 @@ export default function Sidebar() {
                     roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
                 },
                 {
-                    label: "Time Off Admin",
+                    label: "Time Off Admin & Approvals",
                     path: "/admin/time-off",
                     icon: ListChecks,
                     roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],

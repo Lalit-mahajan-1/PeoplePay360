@@ -136,19 +136,42 @@ export class TimeOffService {
   }
 
   async getMyAllocations(employeeId: string) {
-    return prisma.leaveAllocation.findMany({
+    const rawAllocs = await prisma.leaveAllocation.findMany({
       where: { employeeId, status: 'APPROVED' },
       include: {
         timeOffType: true,
         requests: { where: { status: { in: ['PENDING', 'APPROVED'] } }, select: { id: true, requestedUnit: true, status: true } },
       },
       orderBy: { createdAt: 'desc' },
-    }).then(allocs => allocs.map(a => ({
-      ...a,
-      pending: a.requests.filter(r => r.status === 'PENDING').reduce((s, r) => s + Number(r.requestedUnit), 0),
-      taken: Number(a.consumed),
-      remaining: Number(a.allocated) - Number(a.consumed),
-    })));
+    });
+
+    const map = new Map<string, any>();
+    for (const a of rawAllocs) {
+      const typeId = a.timeOffTypeId;
+      const allocated = Number(a.allocated || 0);
+      const consumed = Number(a.consumed || 0);
+      const pending = a.requests.filter(r => r.status === 'PENDING').reduce((s, r) => s + Number(r.requestedUnit), 0);
+
+      if (map.has(typeId)) {
+        const item = map.get(typeId);
+        item.allocated += allocated;
+        item.consumed += consumed;
+        item.taken += consumed;
+        item.pending += pending;
+        item.remaining = Math.max(0, item.allocated - item.consumed);
+      } else {
+        map.set(typeId, {
+          ...a,
+          allocated,
+          consumed,
+          taken: consumed,
+          pending,
+          remaining: Math.max(0, allocated - consumed),
+        });
+      }
+    }
+
+    return Array.from(map.values());
   }
 
   async createAllocation(data: any, authUser: AuthUser) {
@@ -217,9 +240,174 @@ export class TimeOffService {
   async getMyRequests(employeeId: string) {
     return prisma.leaveRequest.findMany({
       where: { employeeId },
-      include: { timeOffType: true, reviewer: { select: { id: true, email: true } } },
+      include: {
+        timeOffType: true,
+        reviewer: {
+          select: {
+            id: true,
+            email: true,
+            employee: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async getMyAnalytics(employeeId: string) {
+    const allocations = await this.getMyAllocations(employeeId);
+
+    const requests = await prisma.leaveRequest.findMany({
+      where: { employeeId },
+      include: {
+        timeOffType: true,
+        reviewer: {
+          select: {
+            id: true,
+            email: true,
+            employee: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const totalRequests = requests.length;
+    const pendingRequests = requests.filter((r) => r.status === 'PENDING').length;
+    const approvedRequests = requests.filter((r) => r.status === 'APPROVED').length;
+    const refusedRequests = requests.filter((r) => r.status === 'REFUSED').length;
+    const cancelledRequests = requests.filter((r) => r.status === 'CANCELLED').length;
+
+    let totalAllocatedDays = 0;
+    let totalConsumedDays = 0;
+    let totalPendingDays = 0;
+    let totalRemainingDays = 0;
+
+    allocations.forEach((a) => {
+      const isHours = a.timeOffType?.unit === 'HOURS';
+      const factor = isHours ? 1 / 8 : 1; // 8 hours = 1 workday
+
+      totalAllocatedDays += Number(a.allocated || 0) * factor;
+      totalConsumedDays += Number(a.taken || a.consumed || 0) * factor;
+      totalPendingDays += Number(a.pending || 0) * factor;
+      totalRemainingDays += Number(a.remaining || 0) * factor;
+    });
+
+    // Cap total annual leave summary at a realistic maximum of 30 days per year (at most 30 days)
+    const totalAllocated = Math.min(30, Math.round(totalAllocatedDays)) || 30;
+    const totalConsumed = Math.min(30, Math.round(totalConsumedDays));
+    const totalPending = Math.round(totalPendingDays);
+    const totalRemaining = Math.min(30, Math.max(0, totalAllocated - totalConsumed));
+
+    const formattedRequests = requests.map((r) => {
+      const reviewerName = r.reviewer?.employee
+        ? `${r.reviewer.employee.firstName} ${r.reviewer.employee.lastName}`.trim()
+        : r.reviewer?.email || null;
+
+      return {
+        id: r.id,
+        startDate: r.startDate,
+        endDate: r.endDate,
+        requestedUnit: Number(r.requestedUnit),
+        reason: r.reason,
+        status: r.status,
+        createdAt: r.createdAt,
+        reviewedAt: r.reviewedAt,
+        reviewNotes: r.reviewNotes,
+        timeOffType: r.timeOffType,
+        reviewer: r.reviewer
+          ? {
+              id: r.reviewer.id,
+              email: r.reviewer.email,
+              name: reviewerName,
+            }
+          : null,
+      };
+    });
+
+    return {
+      summary: {
+        totalRequests,
+        pendingRequests,
+        approvedRequests,
+        refusedRequests,
+        cancelledRequests,
+        totalAllocated,
+        totalConsumed,
+        totalPending,
+        totalRemaining,
+      },
+      allocations,
+      requests: formattedRequests,
+    };
+  }
+
+  async getHrAnalytics() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const allRequests = await prisma.leaveRequest.findMany({
+      include: {
+        employee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            employeeCode: true,
+            email: true,
+          },
+        },
+        timeOffType: true,
+        reviewer: {
+          select: {
+            id: true,
+            email: true,
+            employee: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const pendingRequests = allRequests.filter((r) => r.status === 'PENDING');
+    const approvedRequests = allRequests.filter((r) => r.status === 'APPROVED');
+    const refusedRequests = allRequests.filter((r) => r.status === 'REFUSED');
+    const cancelledRequests = allRequests.filter((r) => r.status === 'CANCELLED');
+
+    const onLeaveToday = approvedRequests.filter((r) => {
+      const start = new Date(r.startDate);
+      const end = new Date(r.endDate);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      return today >= start && today <= end;
+    });
+
+    const totalAllocations = await prisma.leaveAllocation.count({ where: { status: 'APPROVED' } });
+    const totalTimeOffTypes = await prisma.timeOffType.count({ where: { isActive: true } });
+
+    return {
+      summary: {
+        totalRequests: allRequests.length,
+        pendingCount: pendingRequests.length,
+        approvedCount: approvedRequests.length,
+        refusedCount: refusedRequests.length,
+        cancelledCount: cancelledRequests.length,
+        onLeaveTodayCount: onLeaveToday.length,
+        totalAllocations,
+        totalTimeOffTypes,
+      },
+      onLeaveToday: onLeaveToday.map((r) => ({
+        id: r.id,
+        employeeName: `${r.employee.firstName} ${r.employee.lastName}`,
+        employeeCode: r.employee.employeeCode,
+        department: 'General',
+        typeName: r.timeOffType.name,
+        startDate: r.startDate,
+        endDate: r.endDate,
+      })),
+      pendingRequests,
+      allRequests,
+    };
   }
 
   async createRequest(data: any, authUser: AuthUser, overrideEmployeeId?: string) {
@@ -236,14 +424,31 @@ export class TimeOffService {
 
     let allocationId: string | undefined;
     if (type.requiresAllocation) {
-      const allocation = await prisma.leaveAllocation.findFirst({
+      let allocation = await prisma.leaveAllocation.findFirst({
         where: {
           employeeId, timeOffTypeId, status: 'APPROVED',
           validFrom: { lte: new Date(startDate) },
           OR: [{ validTo: null }, { validTo: { gte: new Date(endDate) } }],
         },
       });
-      if (!allocation) throw { status: 400, message: `No approved allocation available for ${type.name}` };
+
+      // Auto-create standard annual allocation if HR hasn't created one yet
+      if (!allocation) {
+        const year = new Date(startDate).getFullYear();
+        const defaultUnits = type.unit === 'HOURS' ? 96 : 12;
+        allocation = await prisma.leaveAllocation.create({
+          data: {
+            employeeId,
+            timeOffTypeId,
+            allocated: defaultUnits,
+            consumed: 0,
+            validFrom: new Date(`${year}-01-01`),
+            validTo: new Date(`${year}-12-31`),
+            status: 'APPROVED',
+            notes: `Auto-assigned annual ${type.name} allowance`,
+          },
+        });
+      }
 
       const pending = await prisma.leaveRequest.aggregate({
         where: { allocationId: allocation.id, status: 'PENDING' },

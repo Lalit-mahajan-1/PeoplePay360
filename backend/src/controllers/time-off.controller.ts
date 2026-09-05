@@ -133,6 +133,33 @@ export const getMyRequests = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+export const getMyAnalytics = async (req: Request, res: Response): Promise<void> => {
+  try {
+    let employeeId = req.user?.employeeId;
+    if (!employeeId) {
+      const user = await prisma.user.findUnique({ where: { id: req.user!.userId }, include: { employee: true } });
+      employeeId = user?.employee?.id;
+    }
+    if (!employeeId) {
+      res.status(400).json({ success: false, message: 'No employee record linked to this account' });
+      return;
+    }
+    const analytics = await timeOffService.getMyAnalytics(employeeId);
+    res.json({ success: true, data: analytics });
+  } catch (error: any) {
+    handleError(res, error, 'fetching my time off analytics');
+  }
+};
+
+export const getHrAnalytics = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const analytics = await timeOffService.getHrAnalytics();
+    res.json({ success: true, data: analytics });
+  } catch (error: any) {
+    handleError(res, error, 'fetching HR time off analytics');
+  }
+};
+
 export const createRequest = async (req: Request, res: Response): Promise<void> => {
   try {
     const request = await timeOffService.createRequest(req.body, req.user!);

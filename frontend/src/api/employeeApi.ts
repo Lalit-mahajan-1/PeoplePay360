@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { EmployeeProfile, LeaveBalance, LeaveRequest, Payslip } from '../types/employee.types';
+import type { EmployeeProfile, LeaveBalance, LeaveRequest, TimeOffType, Payslip } from '../types/employee.types';
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
@@ -42,17 +42,64 @@ export const checkOut = () =>
 
 // ── Leave ──
 export const getMyLeaveBalances = () =>
-  API.get<{ success: boolean; data: LeaveBalance[] }>('/employees/me/leave-balances');
+  API.get<{ success: boolean; data: LeaveBalance[] }>('/time-off/allocations/mine');
 
 export const getMyLeaveRequests = () =>
-  API.get<{ success: boolean; data: LeaveRequest[] }>('/employees/me/leave-requests');
+  API.get<{ success: boolean; data: LeaveRequest[] }>('/time-off/requests/mine');
+
+export const getMyTimeOffAnalytics = () =>
+  API.get<{
+    success: boolean;
+    data: {
+      summary: {
+        totalRequests: number;
+        pendingRequests: number;
+        approvedRequests: number;
+        refusedRequests: number;
+        cancelledRequests: number;
+        totalAllocated: number;
+        totalConsumed: number;
+        totalPending: number;
+        totalRemaining: number;
+      };
+      allocations: LeaveBalance[];
+      requests: LeaveRequest[];
+    };
+  }>('/time-off/my-analytics');
+
+export const getHrTimeOffAnalytics = () =>
+  API.get<{
+    success: boolean;
+    data: {
+      summary: {
+        totalRequests: number;
+        pendingCount: number;
+        approvedCount: number;
+        refusedCount: number;
+        cancelledCount: number;
+        onLeaveTodayCount: number;
+        totalAllocations: number;
+        totalTimeOffTypes: number;
+      };
+      onLeaveToday: any[];
+      pendingRequests: any[];
+      allRequests: any[];
+    };
+  }>('/time-off/hr-analytics');
+
+export const getLeaveTypes = () =>
+  API.get<{ success: boolean; data: TimeOffType[] }>('/time-off/types');
 
 export const submitLeaveRequest = (data: {
-  leaveTypeId: string;
+  timeOffTypeId: string;
   startDate: string;
   endDate: string;
-  reason: string;
-}) => API.post('/employees/me/leave-requests', data);
+  requestedUnit: number;
+  reason?: string;
+}) => API.post('/time-off/requests', data);
+
+export const cancelLeaveRequest = (id: string) =>
+  API.post(`/time-off/requests/${id}/cancel`);
 
 // ── Payslips ──
 export const getMyPayslips = () =>

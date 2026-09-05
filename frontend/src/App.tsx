@@ -69,6 +69,13 @@ function HomeRoute() {
     return <Dashboard />;
 }
 
+function TimeOffRoute() {
+    const { user } = useAuth();
+    const isHrUser = user && ["ADMIN", "HR_MANAGER", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"].includes(user.role);
+    if (isHrUser) return <TimeOffManagementPage />;
+    return <MyLeaves />;
+}
+
 function AppRoutes() {
     const { isAuthenticated, isLoading } = useAuth();
     if (isLoading) return null;
@@ -80,7 +87,8 @@ function AppRoutes() {
             <Route path="/employees/:id" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN", "HR_MANAGER", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"]}><EmployeeDetail /></RoleGuard></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><MyProfile /></PrivateRoute>} />
             <Route path="/attendance" element={<PrivateRoute><AttendancePage /></PrivateRoute>} />
-            <Route path="/time-off" element={<PrivateRoute><MyLeaves /></PrivateRoute>} />
+            <Route path="/time-off" element={<PrivateRoute><TimeOffRoute /></PrivateRoute>} />
+            <Route path="/my-leaves" element={<PrivateRoute><MyLeaves /></PrivateRoute>} />
             <Route path="/admin/time-off" element={<PrivateRoute><RoleGuard allowedRoles={["ADMIN", "HR_MANAGER", "HR_PAYROLL_MANAGER", "HR_PAYROLL_USER"]}><TimeOffManagementPage /></RoleGuard></PrivateRoute>} />
             <Route path="/payslips" element={<PrivateRoute><MyPayslips /></PrivateRoute>} />
             <Route path="/payslips/:id" element={<PrivateRoute><PayslipDetailPage /></PrivateRoute>} />

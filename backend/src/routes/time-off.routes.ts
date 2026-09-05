@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   getAllTimeOffTypes, createTimeOffType, updateTimeOffType, deleteTimeOffType,
   getAllAllocations, getMyAllocations, createAllocation, approveAllocation, updateAllocation,
-  getAllRequests, getMyRequests, createRequest, approveRequest, refuseRequest, cancelRequest,
+  getAllRequests, getMyRequests, getMyAnalytics, getHrAnalytics, createRequest, approveRequest, refuseRequest, cancelRequest,
 } from '../controllers/time-off.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { authorize } from '../middleware/role.middleware';
@@ -14,6 +14,10 @@ const HR_ROLES = ['HR_MANAGER', 'HR_PAYROLL_USER', 'HR_PAYROLL_MANAGER', 'ADMIN'
 const ADMIN_ROLES = ['HR_PAYROLL_MANAGER', 'ADMIN'];
 
 router.use(authenticate);
+
+// === ANALYTICS & STATS ===
+router.get('/my-analytics', authorize(ALL_ROLES), getMyAnalytics);
+router.get('/hr-analytics', authorize(HR_ROLES), getHrAnalytics);
 
 // === TYPES ===
 router.get('/types', authorize(ALL_ROLES), getAllTimeOffTypes);
