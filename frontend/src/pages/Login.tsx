@@ -50,6 +50,18 @@ export default function Login() {
             description: "HR & employee management",
         },
         {
+            role: "HR Payroll User",
+            email: "kavita@peoplepay360.com",
+            password: "payroll123",
+            description: "Payroll processing",
+        },
+        {
+            role: "HR Payroll Manager",
+            email: "nikhil@peoplepay360.com",
+            password: "prmgr123",
+            description: "Payroll approval",
+        },
+        {
             role: "Employee",
             email: "rahul@peoplepay360.com",
             password: "emp12345",
@@ -280,9 +292,10 @@ export default function Login() {
                                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm ring-1 ring-slate-100 transition-colors group-hover:text-indigo-600">
                                                 {cred.role === "Admin" ? (
                                                     <ShieldCheck className="h-4 w-4" />
-                                                ) : cred.role ===
-                                                  "HR Manager" ? (
+                                                ) : cred.role === "HR Manager" ? (
                                                     <Users className="h-4 w-4" />
+                                                ) : cred.role.includes("Payroll") ? (
+                                                    <WalletCards className="h-4 w-4" />
                                                 ) : (
                                                     <UserIcon />
                                                 )}

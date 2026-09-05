@@ -1,14 +1,19 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import prisma from './lib/prisma';
 
 // ── Route Imports ──
 import authRoutes from './routes/auth.routes';
 import employeeRoutes from './routes/employee.routes';
 import attendanceRoutes from './routes/attendance.routes';
-
-// Force nodemon reload for attendance routes
+import workingScheduleRoutes from './routes/working-schedule.routes';
+import contractRoutes from './routes/contract.routes';
+import timeOffRoutes from './routes/time-off.routes';
+import salaryRoutes from './routes/salary.routes';
+import payrollRoutes from './routes/payroll.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 
 dotenv.config();
 
@@ -17,11 +22,27 @@ const PORT = process.env.PORT || 5000;
 
 // ── Middleware ──
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    const allowed = [
+      process.env.FRONTEND_URL || 'http://localhost:5173',
+      'http://localhost:5001',
+      'http://localhost:5002',
+      'http://localhost:5003',
+      'http://localhost:3000',
+    ];
+    if (!origin || allowed.includes(origin) || origin.startsWith('http://localhost:')) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// ── Static files (uploads for avatars) ──
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // ── Health Check ──
 app.get('/api/health', async (_req, res) => {
@@ -37,8 +58,12 @@ app.get('/api/health', async (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/attendance', attendanceRoutes);
-// app.use('/api/leave', leaveRoutes);
-// app.use('/api/payslips', payslipRoutes);
+app.use('/api/working-schedules', workingScheduleRoutes);
+app.use('/api/contracts', contractRoutes);
+app.use('/api/time-off', timeOffRoutes);
+app.use('/api/salary', salaryRoutes);
+app.use('/api/payroll', payrollRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // ── 404 Fallback ──
 app.use((_req, res) => {

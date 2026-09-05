@@ -1,0 +1,286 @@
+import { useEffect, useState } from "react";
+import api from "../services/api";
+import toast from "react-hot-toast";
+import { Plus, Check, X, ListChecks, ListPlus, CheckCircle2, XCircle, Clock, Users, CalendarDays, Tag, Award } from "lucide-react";
+
+type Tab = "requests" | "allocations" | "types";
+const REQ_STATUS: Record<string, any> = {
+    PENDING: { color: "bg-amber-500/10 text-amber-600 border-amber-200", label: "Pending" },
+    APPROVED: { color: "bg-emerald-500/10 text-emerald-600 border-emerald-200", label: "Approved" },
+    REFUSED: { color: "bg-red-500/10 text-red-600 border-red-200", label: "Refused" },
+    CANCELLED: { color: "bg-gray-100 text-gray-500 border-gray-200", label: "Cancelled" },
+    DRAFT: { color: "bg-blue-500/10 text-blue-600 border-blue-200", label: "Draft" },
+};
+
+export default function TimeOffManagementPage() {
+    const [tab, setTab] = useState<Tab>("requests");
+    const [requests, setRequests] = useState<any[]>([]);
+    const [allocations, setAllocations] = useState<any[]>([]);
+    const [types, setTypes] = useState<any[]>([]);
+    const [employees, setEmployees] = useState<any[]>([]);
+    const [showAllocForm, setShowAllocForm] = useState(false);
+    const [showTypeForm, setShowTypeForm] = useState(false);
+    const [allocForm, setAllocForm] = useState<any>({ employeeId: "", timeOffTypeId: "", allocated: 12, validFrom: new Date(new Date().getFullYear() + "-01-01"), validTo: new Date(new Date().getFullYear() + "-12-31"), notes: "" });
+    const [typeForm, setTypeForm] = useState<any>({ name: "", code: "", unit: "DAYS", requiresAllocation: true, requiresApproval: true, isPaid: true, isActive: true, description: "" });
+    const [noteInput, setNoteInput] = useState("");
+
+    useEffect(() => { load(); }, []);
+    async function load() {
+        try {
+            const [r, a, t, e] = await Promise.all([
+                api.get("/time-off/requests"),
+                api.get("/time-off/allocations"),
+                api.get("/time-off/types?includeInactive=true"),
+                api.get("/employees"),
+            ]);
+            setRequests(r.data.data || []);
+            setAllocations(a.data.data || []);
+            setTypes(t.data.data || []);
+            setEmployees(e.data.data || []);
+        } catch { toast.error("Failed to load"); }
+    }
+
+    async function approveReq(id: string) {
+        try {
+            await api.post(`/time-off/requests/${id}/approve`, { reviewNotes: noteInput || undefined });
+            toast.success("Request approved"); setNoteInput(""); load();
+        } catch (e: any) { toast.error(e.response?.data?.message || "Failed"); }
+    }
+
+    async function refuseReq(id: string) {
+        try {
+            await api.post(`/time-off/requests/${id}/refuse`, { reviewNotes: noteInput || undefined });
+            toast.success("Request refused"); setNoteInput(""); load();
+        } catch (e: any) { toast.error(e.response?.data?.message || "Failed"); }
+    }
+
+    async function approveAlloc(id: string) {
+        try { await api.post(`/time-off/allocations/${id}/approve`); toast.success("Allocation approved"); load(); }
+        catch (e: any) { toast.error(e.response?.data?.message || "Failed"); }
+    }
+
+    async function saveAlloc() {
+        try { await api.post("/time-off/allocations", allocForm); toast.success("Allocation created"); setShowAllocForm(false); load(); }
+        catch (e: any) { toast.error(e.response?.data?.message || "Failed"); }
+    }
+
+    async function saveType() {
+        try { await api.post("/time-off/types", typeForm); toast.success("Type created"); setShowTypeForm(false); load(); }
+        catch (e: any) { toast.error(e.response?.data?.message || "Failed"); }
+    }
+
+    const TabsComponent = () => (
+        <div className="flex gap-2 mb-6 border-b border-gray-200 bg-white -mx-6 md:-mx-8 px-6 md:px-8 overflow-x-auto">
+            {[{ id: "requests", label: `Leave Requests (${requests.filter(r=>r.status==='PENDING').length} pending)`, icon: Clock }, { id: "allocations", label: "Allocations", icon: Award }, { id: "types", label: "Time Off Types", icon: Tag }].map(t => {
+                const Icon = t.icon as any;
+                const active = tab === t.id;
+                return (
+                    <button key={t.id} onClick={() => setTab(t.id as Tab)} className={`flex items-center gap-2 py-4 px-1 text-sm font-semibold border-b-2 -mb-px transition whitespace-nowrap ${active ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+                        <Icon className="w-4 h-4" />{t.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+
+    return (
+        <div className="p-6 md:p-8 [font-family:-apple-system,BlinkMacSystemFont,'SF_Pro_Text','Inter',sans-serif] max-w-[1500px] mx-auto">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <h1 className="text-[22px] font-bold text-gray-900 tracking-[-0.01em] flex items-center gap-2">
+                        <ListChecks className="w-6 h-6 text-emerald-600" /> Time Off Management
+                    </h1>
+                    <p className="text-gray-500 text-sm mt-1">Configure leave types, allocate balances, and review requests</p>
+                </div>
+                {tab === "allocations" && (
+                    <button onClick={() => setShowAllocForm(true)} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition active:scale-[0.98]">
+                        <Plus className="w-4 h-4" /> New Allocation
+                    </button>
+                )}
+                {tab === "types" && (
+                    <button onClick={() => setShowTypeForm(true)} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition active:scale-[0.98]">
+                        <Plus className="w-4 h-4" /> New Time Off Type
+                    </button>
+                )}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                {TabsComponent()}
+
+                <div className="p-6 md:p-8">
+                    {tab === "requests" && (
+                        <div className="space-y-3">
+                        {requests.length === 0 && <div className="text-center py-16 text-gray-400">No leave requests</div>}
+                        {requests.map(r => (
+                            <div key={r.id} className={`rounded-2xl border p-5 transition hover:shadow-sm ${r.status === 'PENDING' ? "border-amber-200 bg-amber-50/30" : "border-gray-100"}`}>
+                                <div className="flex flex-wrap items-start gap-4">
+                                    <div className="flex-1 min-w-[200px]">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-semibold text-gray-900">{r.employee.firstName} {r.employee.lastName}</span>
+                                            <span className="text-xs font-mono text-gray-400">{r.employee.employeeCode}</span>
+                                            <span className={`inline-flex px-2.5 py-1 rounded-lg border text-[11px] font-bold ${REQ_STATUS[r.status]?.color || ""}`}>{REQ_STATUS[r.status]?.label || r.status}</span>
+                                        </div>
+                                        <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-gray-600">
+                                            <span className="inline-flex items-center gap-1.5"><Tag className="w-3.5 h-3.5" />{r.timeOffType.name} ({r.timeOffType.code})</span>
+                                            <span className="inline-flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" />{r.startDate.slice(0, 10)} → {r.endDate.slice(0, 10)}</span>
+                                            <span className="inline-flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /><b>{Number(r.requestedUnit)}</b> {r.timeOffType.unit === 'HOURS' ? 'hrs' : 'days'}</span>
+                                        </div>
+                                        {r.reason && <div className="mt-2 text-sm text-gray-500 italic">"{r.reason}</div>}
+                                    </div>
+                                    {r.status === 'PENDING' && (
+                                        <div className="flex flex-col gap-2 w-full md:w-auto">
+                                            <input value={noteInput} onChange={e => setNoteInput(e.target.value)} placeholder="Add note (optional)" className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 min-w-[200px]" />
+                                            <div className="flex gap-2">
+                                                <button onClick={() => approveReq(r.id)} className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold transition">
+                                                    <CheckCircle2 className="w-4 h-4" /> Approve
+                                                </button>
+                                                <button onClick={() => refuseReq(r.id)} className="inline-flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-bold transition">
+                                                    <XCircle className="w-4 h-4" /> Refuse
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {r.reviewNotes && r.status !== 'PENDING' && (
+                                        <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 max-w-xs">
+                                            <div>Reviewed by {r.reviewer?.email || '-'}</div>
+                                            <div>Note: {r.reviewNotes || '-'}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        </div>
+                    )}
+
+                    {tab === "allocations" && (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/50">
+                                        <th className="px-4 py-3">Employee</th>
+                                        <th className="px-4 py-3">Leave Type</th>
+                                        <th className="px-4 py-3 text-right">Allocated</th>
+                                        <th className="px-4 py-3 text-right">Consumed</th>
+                                        <th className="px-4 py-3 text-right">Remaining</th>
+                                        <th className="px-4 py-3">Validity</th>
+                                        <th className="px-4 py-3">Status</th>
+                                        <th className="px-4 py-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {allocations.length === 0 && <tr><td colSpan={8} className="text-center py-12 text-gray-400 border-t border-gray-50">No allocations yet</td></tr>}
+                                    {allocations.map(a => {
+                                        const all = Number(a.allocated), used = Number(a.consumed), rem = all - used;
+                                        return (
+                                            <tr key={a.id} className="border-t border-gray-50 hover:bg-gray-50/30">
+                                                <td className="px-4 py-3">
+                                                    <div className="font-semibold text-gray-900">{a.employee.firstName} {a.employee.lastName}</div>
+                                                    <div className="text-xs text-gray-400 font-mono">{a.employee.employeeCode}</div>
+                                                </td>
+                                                <td className="px-4 py-3">{a.timeOffType.name}
+                                                <div className="mt-2 max-w-[200px] h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-emerald-500" style={{ width: all > 0 ? `${(used / all) * 100}%` : '0%' }} />
+                                                </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-bold">{all}</td>
+                                                <td className="px-4 py-3 text-right text-red-600 font-semibold">{used}</td>
+                                                <td className="px-4 py-3 text-right text-emerald-600 font-bold">{rem}</td>
+                                                <td className="px-4 py-3 text-xs text-gray-500">{a.validFrom.slice(0,10)}<br/>{a.validTo ? 'to ' + a.validTo.slice(0,10) : '∞'}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${a.status==='APPROVED'?'bg-emerald-500/10 text-emerald-600 border-emerald-200':a.status==='DRAFT'?'bg-amber-500/10 text-amber-600 border-amber-200':'bg-gray-100 text-gray-500 border-gray-200'}`}>{a.status}</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    {a.status !== 'APPROVED' && <button onClick={() => approveAlloc(a.id)} className="text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition">Approve</button>}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {tab === "types" && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {types.length === 0 && <div className="col-span-full text-center py-16 text-gray-400">No types configured</div>}
+                            {types.map(t => (
+                                <div key={t.id} className={`p-5 rounded-2xl border transition ${t.isActive ? "border-gray-100 bg-white hover:shadow-md" : "border-gray-100 bg-gray-50 opacity-60"}`}>
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div>
+                                            <h3 className="font-bold text-gray-900">{t.name}</h3>
+                                            <p className="font-mono text-xs text-gray-400">{t.code}</p>
+                                        </div>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${t.isActive ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-500"}`}>{t.isActive ? "ACTIVE" : "INACTIVE"}</span>
+                                    </div>
+                                    {t.description && <p className="text-sm text-gray-600 mb-3">{t.description}</p>}
+                                    <div className="flex flex-wrap gap-2 text-[11px]">
+                                        <span className="px-2 py-1 rounded-full bg-blue-50 text-blue-600 font-semibold">{t.unit}</span>
+                                        {t.requiresAllocation && <span className="px-2 py-1 rounded-full bg-purple-50 text-purple-600 font-semibold">Requires Allocation</span>}
+                                        {t.requiresApproval && <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-600 font-semibold">Requires Approval</span>}
+                                        {t.isPaid ? <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 font-semibold">Paid</span> : <span className="px-2 py-1 rounded-full bg-red-50 text-red-600 font-semibold">Unpaid</span>}
+                                    </div>
+                                    <div className="mt-4 pt-4 border-t border-gray-50 text-xs text-gray-500 flex items-center justify-between">
+                                        <span>{t._count?.allocations || 0} allocations</span>
+                                        <span>{t._count?.requests || 0} requests</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {showAllocForm && (
+                <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAllocForm(false)}>
+                    <div onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between"><h2 className="font-bold text-lg text-gray-900">New Leave Allocation</h2><button onClick={() => setShowAllocForm(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500"><X className="w-5 h-5" /></button></div>
+                        <div className="p-6 space-y-4">
+                            <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Employee *</label>
+                                <select value={allocForm.employeeId} onChange={e => setAllocForm({ ...allocForm, employeeId: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 bg-white"><option value="">Select...</option>{employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}</select></div>
+                            <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Leave Type *</label>
+                                <select value={allocForm.timeOffTypeId} onChange={e => setAllocForm({ ...allocForm, timeOffTypeId: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 bg-white"><option value="">Select...</option>{types.filter(t=>t.isActive).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Units *</label><input type="number" value={allocForm.allocated} onChange={e => setAllocForm({ ...allocForm, allocated: Number(e.target.value) })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/30" /></div>
+                                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Valid From *</label><input type="date" value={allocForm.validFrom} onChange={e => setAllocForm({ ...allocForm, validFrom: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none" /></div>
+                                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Valid To</label><input type="date" value={allocForm.validTo} onChange={e => setAllocForm({ ...allocForm, validTo: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none" /></div>
+                            </div>
+                            <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Notes</label><textarea rows={2} value={allocForm.notes} onChange={e => setAllocForm({ ...allocForm, notes: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none resize-none" /></div>
+                        </div>
+                        <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+                            <button onClick={() => setShowAllocForm(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancel</button>
+                            <button onClick={saveAlloc} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700">Create Allocation</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showTypeForm && (
+                <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowTypeForm(false)}>
+                    <div onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between"><h2 className="font-bold text-lg text-gray-900">New Time Off Type</h2><button onClick={() => setShowTypeForm(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500"><X className="w-5 h-5" /></button></div>
+                        <div className="p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Name *</label><input value={typeForm.name} onChange={e => setTypeForm({ ...typeForm, name: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/30" placeholder="Sick Leave" /></div>
+                                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Code *</label><input value={typeForm.code} onChange={e => setTypeForm({ ...typeForm, code: e.target.value.toUpperCase() })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 font-mono" placeholder="SL" /></div>
+                            </div>
+                            <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Unit</label>
+                                <select value={typeForm.unit} onChange={e => setTypeForm({ ...typeForm, unit: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 bg-white"><option value="DAYS">Days</option><option value="HOURS">Hours</option></select>
+                            </div>
+                            {[{k:"requiresAllocation",l:"Requires Balance Allocation"},{k:"requiresApproval",l:"Requires Approval Workflow"},{k:"isPaid",l:"Is Paid Time Off"},{k:"isActive",l:"Type Is Active"}].map(o=>(
+                            <label key={o.k} className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked={(typeForm as any)[o.k]} onChange={e=>setTypeForm({...typeForm,[o.k]:e.target.checked})} className="w-4 h-4 rounded text-blue-600" />
+                                <span className="text-sm text-gray-700">{o.l}</span>
+                            </label>
+                            ))}
+                            <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Description</label><textarea value={typeForm.description} onChange={e => setTypeForm({ ...typeForm, description: e.target.value })} rows={2} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none resize-none" /></div>
+                        </div>
+                        <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+                            <button onClick={() => setShowTypeForm(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancel</button>
+                            <button onClick={saveType} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700">Create Type</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

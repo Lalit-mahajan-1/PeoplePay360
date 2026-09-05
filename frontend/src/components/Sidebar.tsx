@@ -17,6 +17,10 @@ import {
     FileText,
     BarChart3,
     ShieldCheck,
+    CalendarClock,
+    Briefcase,
+    Banknote,
+    ListChecks,
 } from "lucide-react";
 import { FiLogOut } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
@@ -141,18 +145,31 @@ export default function Sidebar() {
         ].includes(user.role);
     if (isAdminOrHR) {
         navSections.push({
-            title: "ADMINISTRATION",
+            title: "HR ADMINISTRATION",
             items: [
                 {
                     label: "Employees",
                     path: "/admin/employees",
                     icon: Users,
-                    roles: [
-                        "ADMIN",
-                        "HR_MANAGER",
-                        "HR_PAYROLL_USER",
-                        "HR_PAYROLL_MANAGER",
-                    ],
+                    roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
+                },
+                {
+                    label: "Contracts",
+                    path: "/contracts",
+                    icon: FileText,
+                    roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
+                },
+                {
+                    label: "Working Schedules",
+                    path: "/working-schedules",
+                    icon: CalendarClock,
+                    roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
+                },
+                {
+                    label: "Time Off Admin",
+                    path: "/admin/time-off",
+                    icon: ListChecks,
+                    roles: ["ADMIN", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
                 },
                 {
                     label: "User Management",
@@ -160,25 +177,25 @@ export default function Sidebar() {
                     icon: ShieldCheck,
                     roles: ["ADMIN"],
                 },
+            ],
+        });
+        navSections.push({
+            title: "PAYROLL & COMPENSATION",
+            items: [
                 {
-                    label: "Contracts",
-                    path: "/contracts",
-                    icon: FileText,
-                    roles: [
-                        "ADMIN",
-                        "HR_MANAGER",
-                        "HR_PAYROLL_USER",
-                        "HR_PAYROLL_MANAGER",
-                    ],
+                    label: "Salary Structures",
+                    path: "/salary",
+                    icon: Briefcase,
+                    roles: ["ADMIN", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
                 },
                 {
-                    label: "Payroll",
+                    label: "Payroll Center",
                     path: "/payroll",
                     icon: Wallet,
                     roles: ["ADMIN", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
                 },
                 {
-                    label: "Reports",
+                    label: "Payroll Dashboard",
                     path: "/reports",
                     icon: BarChart3,
                     roles: ["ADMIN", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"],
