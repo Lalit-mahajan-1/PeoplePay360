@@ -1,7 +1,9 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import {
   getMyProfile,
   updateMyProfile,
+  uploadMyAvatar,
+  deleteMyAvatar,
   getAllEmployees,
   getEmployeeById,
   createEmployee,
@@ -36,6 +38,18 @@ router.put(
   '/me',
   authorize(['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER', 'ADMIN']),
   updateMyProfile
+);
+router.put(
+  '/me/avatar',
+  authorize(['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER', 'ADMIN']),
+  express.raw({ type: '*/*', limit: '5mb' }),
+  uploadMyAvatar
+);
+
+router.delete(
+  '/me/avatar',
+  authorize(['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER', 'ADMIN']),
+  deleteMyAvatar
 );
 
 // ──────────────────────────────────────────────

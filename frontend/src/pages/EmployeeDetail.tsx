@@ -26,6 +26,7 @@ interface Employee {
     email: string;
     phone?: string;
     gender?: string;
+    avatarUrl?: string;
     department?: Department;
     departmentId?: string;
     jobPosition?: string;
@@ -59,15 +60,20 @@ const avatarPalette = [
 
 function getAvatarStyle(id: string) {
     let hash = 0;
-    for (let i = 0; i < id.length; i++)
+
+    for (let i = 0; i < id.length; i++) {
         hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+    }
+
     return avatarPalette[hash % avatarPalette.length];
 }
 
-// Apple design: Critically damped default spring (no overshoot)
-const appleSpring = { type: "spring" as const, bounce: 0, duration: 0.4 };
+const appleSpring = {
+    type: "spring" as const,
+    bounce: 0,
+    duration: 0.4,
+};
 
-// Removed CSS transitions for layout changes; relying on springs for interruptibility
 const fieldClass =
     "w-full px-3 py-2 bg-gray-50/80 border border-black/[0.08] rounded-[10px] text-[14px] text-gray-900 outline-none focus:bg-white focus:ring-4 focus:ring-blue-500/15 focus:border-blue-500/60 disabled:bg-gray-100/80 disabled:text-gray-400";
 
@@ -78,10 +84,39 @@ function StaticField({ label, value }: { label: string; value: string }) {
     return (
         <motion.div layout transition={appleSpring}>
             <p className={labelClass}>{label}</p>
+
             <div className="w-full px-3 py-2 bg-gray-50/60 border border-black/[0.06] rounded-[10px] text-[14px] text-gray-800 min-h-[38px] flex items-center">
                 {value || <span className="text-gray-400">—</span>}
             </div>
         </motion.div>
+    );
+}
+
+function EmployeeAvatar({ employee }: { employee: Employee }) {
+    const [imageError, setImageError] = useState(false);
+
+    const avatar = getAvatarStyle(employee.id);
+
+    const initials =
+        `${employee.firstName?.[0] || ""}${employee.lastName?.[0] || ""}`.toUpperCase();
+
+    const showImage = Boolean(employee.avatarUrl) && !imageError;
+
+    return (
+        <div
+            className={`w-20 h-20 shrink-0 rounded-[18px] overflow-hidden flex items-center justify-center text-[20px] font-semibold ${avatar.bg} ${avatar.text}`}
+        >
+            {showImage ? (
+                <img
+                    src={employee.avatarUrl}
+                    alt={`${employee.firstName} ${employee.lastName}`}
+                    className="w-full h-full object-cover"
+                    onError={() => setImageError(true)}
+                />
+            ) : (
+                initials
+            )}
+        </div>
     );
 }
 
@@ -96,6 +131,7 @@ export default function EmployeeDetail() {
         "HR_PAYROLL_USER",
         "HR_PAYROLL_MANAGER",
     ]);
+
     const canDelete = hasRole(["ADMIN", "HR_PAYROLL_MANAGER"]);
 
     const [employee, setEmployee] = useState<Employee | null>(null);
@@ -105,6 +141,7 @@ export default function EmployeeDetail() {
     const [editMode, setEditMode] = useState(false);
     const [saving, setSaving] = useState(false);
     const [tab, setTab] = useState<"work" | "private">("work");
+
     const [counts, setCounts] = useState({
         timeOff: 0,
         contracts: 0,
@@ -134,9 +171,12 @@ export default function EmployeeDetail() {
     const loadEmployee = async () => {
         try {
             setLoading(true);
+
             const res = await api.get(`/employees/${id}`);
             const emp: Employee = res.data.data;
+
             setEmployee(emp);
+
             setForm({
                 firstName: emp.firstName,
                 lastName: emp.lastName,
@@ -166,19 +206,29 @@ export default function EmployeeDetail() {
     const loadCounts = async () => {
         const fetchCount = async (url: string) => {
             try {
-                const res = await api.get(url, { params: { employeeId: id } });
+                const res = await api.get(url, {
+                    params: { employeeId: id },
+                });
+
                 const data = res.data?.data;
+
                 return Array.isArray(data) ? data.length : 0;
             } catch {
                 return 0;
             }
         };
+
         const [timeOff, contracts, attendance] = await Promise.all([
             fetchCount("/time-off"),
             fetchCount("/contracts"),
             fetchCount("/attendance"),
         ]);
-        setCounts({ timeOff, contracts, attendance });
+
+        setCounts({
+            timeOff,
+            contracts,
+            attendance,
+        });
     };
 
     const loadDepartments = async () => {
@@ -192,16 +242,21 @@ export default function EmployeeDetail() {
 
     useEffect(() => {
         if (!id) return;
+
         loadEmployee();
         loadDepartments();
         loadCounts();
+
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     ) => {
-        setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+        setForm((prev) => ({
+            ...prev,
+            [e.target.name]: e.target.value,
+        }));
     };
 
     const handleCancel = () => {
@@ -226,20 +281,33 @@ export default function EmployeeDetail() {
                 bankIFSC: employee.bankIFSC || "",
             });
         }
+
         setEditMode(false);
     };
 
     const handleSave = async () => {
         if (!employee) return;
+
         setSaving(true);
+
         try {
             const payload: any = { ...form };
-            if (!payload.departmentId) delete payload.departmentId;
-            if (!payload.gender) delete payload.gender;
+
+            if (!payload.departmentId) {
+                delete payload.departmentId;
+            }
+
+            if (!payload.gender) {
+                delete payload.gender;
+            }
+
             await api.put(`/employees/${employee.id}`, payload);
+
             toast.success("Employee updated successfully");
+
             setEditMode(false);
-            loadEmployee();
+
+            await loadEmployee();
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Save failed");
         } finally {
@@ -249,11 +317,16 @@ export default function EmployeeDetail() {
 
     const handleArchive = async () => {
         if (!employee) return;
-        if (!confirm(`Archive ${employee.firstName} ${employee.lastName}?`))
+
+        if (!confirm(`Archive ${employee.firstName} ${employee.lastName}?`)) {
             return;
+        }
+
         try {
             await api.delete(`/employees/${employee.id}`);
+
             toast.success("Employee archived");
+
             navigate("/");
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Archive failed");
@@ -276,6 +349,7 @@ export default function EmployeeDetail() {
                 <h1 className="text-[20px] font-semibold text-gray-900 mb-2 tracking-[-0.02em]">
                     Employee not found
                 </h1>
+
                 <Link
                     to="/"
                     className="text-blue-600 text-[14px] font-medium hover:underline"
@@ -286,13 +360,12 @@ export default function EmployeeDetail() {
         );
     }
 
-    const avatar = getAvatarStyle(employee.id);
     const fullName = `${employee.firstName} ${employee.lastName}`;
 
     return (
         <div className="font-[system-ui,sans-serif] pb-12">
-            {/* Translucent Toolbar Layer */}
-            <div className="sticky px-10 top-0 z-10 bg-white/70 backdrop-blur-[20px] saturate-[180%] py-5 ">
+            {/* Toolbar */}
+            <div className="sticky px-10 top-0 z-10 bg-white/70 backdrop-blur-[20px] saturate-[180%] py-5">
                 <div className="flex items-center gap-1.5 text-[13px] mb-1">
                     <Link
                         to="/"
@@ -301,7 +374,9 @@ export default function EmployeeDetail() {
                         <ChevronLeft className="w-3.5 h-3.5" />
                         Employees
                     </Link>
+
                     <span className="text-gray-300">/</span>
+
                     <span className="text-gray-900 font-medium">
                         {fullName}
                     </span>
@@ -319,6 +394,7 @@ export default function EmployeeDetail() {
                                 >
                                     {saving ? "Saving..." : "Save"}
                                 </motion.button>
+
                                 <motion.button
                                     whileTap={{ scale: 0.97 }}
                                     onClick={handleCancel}
@@ -340,10 +416,13 @@ export default function EmployeeDetail() {
                                         Edit
                                     </motion.button>
                                 )}
+
                                 {canDelete &&
                                     employee.status !== "ARCHIVED" && (
                                         <motion.button
-                                            whileTap={{ scale: 0.97 }}
+                                            whileTap={{
+                                                scale: 0.97,
+                                            }}
                                             onClick={handleArchive}
                                             className="flex items-center gap-1.5 px-4 py-2 text-gray-500 rounded-full text-[13px] font-medium hover:text-red-600 hover:bg-red-500/10"
                                         >
@@ -369,6 +448,7 @@ export default function EmployeeDetail() {
                                 {counts.timeOff}
                             </span>
                         </motion.button>
+
                         <motion.button
                             whileTap={{ scale: 0.97 }}
                             onClick={() =>
@@ -382,6 +462,7 @@ export default function EmployeeDetail() {
                                 {counts.contracts}
                             </span>
                         </motion.button>
+
                         <motion.button
                             whileTap={{ scale: 0.97 }}
                             onClick={() =>
@@ -401,18 +482,16 @@ export default function EmployeeDetail() {
                 </div>
             </div>
 
-            <motion.div layout transition={appleSpring} className="  p-8 mt-6">
+            {/* Employee Header */}
+            <motion.div layout transition={appleSpring} className="p-8 mt-6">
                 <div className="flex items-center gap-5">
-                    <div
-                        className={`w-20 h-20 shrink-0 rounded-[18px] flex items-center justify-center text-[20px] font-semibold ${avatar.bg} ${avatar.text}`}
-                    >
-                        {employee.firstName[0]}
-                        {employee.lastName[0]}
-                    </div>
+                    <EmployeeAvatar employee={employee} />
+
                     <div className="min-w-0">
                         <h1 className="text-[24px] font-semibold text-gray-900 tracking-[-0.02em] leading-[1.1] truncate mb-1">
                             {fullName}
                         </h1>
+
                         <p className="text-[20px] text-gray-500 truncate">
                             {employee.jobPosition || "No position"} •{" "}
                             {employee.department?.name || "No department"}
@@ -420,6 +499,7 @@ export default function EmployeeDetail() {
                     </div>
                 </div>
 
+                {/* Tabs */}
                 <div className="flex items-center gap-6 mt-8 border-b border-black/[0.06] relative">
                     {(["work", "private"] as const).map((t) => (
                         <button
@@ -434,6 +514,7 @@ export default function EmployeeDetail() {
                             {t === "work"
                                 ? "Work Information"
                                 : "Private Information"}
+
                             {tab === t && (
                                 <motion.div
                                     layoutId="activeTab"
@@ -445,12 +526,22 @@ export default function EmployeeDetail() {
                     ))}
                 </div>
 
+                {/* Content */}
                 <AnimatePresence mode="popLayout" initial={false}>
                     <motion.div
                         key={tab + (editMode ? "-edit" : "-static")}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.98 }}
+                        initial={{
+                            opacity: 0,
+                            y: 10,
+                        }}
+                        animate={{
+                            opacity: 1,
+                            y: 0,
+                        }}
+                        exit={{
+                            opacity: 0,
+                            scale: 0.98,
+                        }}
                         transition={appleSpring}
                         className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6 mt-6"
                     >
@@ -461,6 +552,7 @@ export default function EmployeeDetail() {
                                         <label className={labelClass}>
                                             Department
                                         </label>
+
                                         <select
                                             name="departmentId"
                                             value={form.departmentId}
@@ -470,6 +562,7 @@ export default function EmployeeDetail() {
                                             <option value="">
                                                 Select Department
                                             </option>
+
                                             {departments.map((d) => (
                                                 <option key={d.id} value={d.id}>
                                                     {d.name}
@@ -477,10 +570,12 @@ export default function EmployeeDetail() {
                                             ))}
                                         </select>
                                     </motion.div>
+
                                     <motion.div layout transition={appleSpring}>
                                         <label className={labelClass}>
                                             Job Position
                                         </label>
+
                                         <input
                                             name="jobPosition"
                                             value={form.jobPosition}
@@ -488,10 +583,12 @@ export default function EmployeeDetail() {
                                             className={fieldClass}
                                         />
                                     </motion.div>
+
                                     <motion.div layout transition={appleSpring}>
                                         <label className={labelClass}>
                                             Job Title
                                         </label>
+
                                         <input
                                             name="jobTitle"
                                             value={form.jobTitle}
@@ -499,10 +596,12 @@ export default function EmployeeDetail() {
                                             className={fieldClass}
                                         />
                                     </motion.div>
+
                                     <motion.div layout transition={appleSpring}>
                                         <label className={labelClass}>
                                             Employee Type
                                         </label>
+
                                         <select
                                             name="employeeType"
                                             value={form.employeeType}
@@ -523,10 +622,12 @@ export default function EmployeeDetail() {
                                             </option>
                                         </select>
                                     </motion.div>
+
                                     <motion.div layout transition={appleSpring}>
                                         <label className={labelClass}>
                                             Status
                                         </label>
+
                                         <select
                                             name="status"
                                             value={form.status}
@@ -544,10 +645,12 @@ export default function EmployeeDetail() {
                                             </option>
                                         </select>
                                     </motion.div>
+
                                     <motion.div layout transition={appleSpring}>
                                         <label className={labelClass}>
                                             Hire Date
                                         </label>
+
                                         <input
                                             name="hireDate"
                                             type="date"
@@ -563,20 +666,24 @@ export default function EmployeeDetail() {
                                         label="Department"
                                         value={employee.department?.name || ""}
                                     />
+
                                     <StaticField
                                         label="Job Position"
                                         value={employee.jobPosition || ""}
                                     />
+
                                     <StaticField
                                         label="Job Title"
                                         value={employee.jobTitle || ""}
                                     />
+
                                     <StaticField
                                         label="Employee Type"
                                         value={
                                             typeLabels[employee.employeeType]
                                         }
                                     />
+
                                     <StaticField
                                         label="Status"
                                         value={
@@ -586,6 +693,7 @@ export default function EmployeeDetail() {
                                                 .toLowerCase()
                                         }
                                     />
+
                                     <StaticField
                                         label="Hire Date"
                                         value={new Date(
@@ -604,6 +712,7 @@ export default function EmployeeDetail() {
                                     <label className={labelClass}>
                                         First Name
                                     </label>
+
                                     <input
                                         name="firstName"
                                         value={form.firstName}
@@ -611,10 +720,12 @@ export default function EmployeeDetail() {
                                         className={fieldClass}
                                     />
                                 </motion.div>
+
                                 <motion.div layout transition={appleSpring}>
                                     <label className={labelClass}>
                                         Last Name
                                     </label>
+
                                     <input
                                         name="lastName"
                                         value={form.lastName}
@@ -622,8 +733,10 @@ export default function EmployeeDetail() {
                                         className={fieldClass}
                                     />
                                 </motion.div>
+
                                 <motion.div layout transition={appleSpring}>
                                     <label className={labelClass}>Email</label>
+
                                     <input
                                         name="email"
                                         type="email"
@@ -632,8 +745,10 @@ export default function EmployeeDetail() {
                                         className={fieldClass}
                                     />
                                 </motion.div>
+
                                 <motion.div layout transition={appleSpring}>
                                     <label className={labelClass}>Phone</label>
+
                                     <input
                                         name="phone"
                                         value={form.phone}
@@ -641,8 +756,10 @@ export default function EmployeeDetail() {
                                         className={fieldClass}
                                     />
                                 </motion.div>
+
                                 <motion.div layout transition={appleSpring}>
                                     <label className={labelClass}>Gender</label>
+
                                     <select
                                         name="gender"
                                         value={form.gender}
@@ -655,8 +772,10 @@ export default function EmployeeDetail() {
                                         <option value="OTHER">Other</option>
                                     </select>
                                 </motion.div>
+
                                 <motion.div layout transition={appleSpring}>
                                     <label className={labelClass}>City</label>
+
                                     <input
                                         name="city"
                                         value={form.city}
@@ -664,8 +783,10 @@ export default function EmployeeDetail() {
                                         className={fieldClass}
                                     />
                                 </motion.div>
+
                                 <motion.div layout transition={appleSpring}>
                                     <label className={labelClass}>State</label>
+
                                     <input
                                         name="state"
                                         value={form.state}
@@ -673,10 +794,12 @@ export default function EmployeeDetail() {
                                         className={fieldClass}
                                     />
                                 </motion.div>
+
                                 <motion.div layout transition={appleSpring}>
                                     <label className={labelClass}>
                                         Country
                                     </label>
+
                                     <input
                                         name="country"
                                         value={form.country}
@@ -684,10 +807,12 @@ export default function EmployeeDetail() {
                                         className={fieldClass}
                                     />
                                 </motion.div>
+
                                 <motion.div layout transition={appleSpring}>
                                     <label className={labelClass}>
                                         Bank Name
                                     </label>
+
                                     <input
                                         name="bankName"
                                         value={form.bankName}
@@ -695,10 +820,12 @@ export default function EmployeeDetail() {
                                         className={fieldClass}
                                     />
                                 </motion.div>
+
                                 <motion.div layout transition={appleSpring}>
                                     <label className={labelClass}>
                                         Account No
                                     </label>
+
                                     <input
                                         name="bankAccountNo"
                                         value={form.bankAccountNo}
@@ -706,10 +833,12 @@ export default function EmployeeDetail() {
                                         className={fieldClass}
                                     />
                                 </motion.div>
+
                                 <motion.div layout transition={appleSpring}>
                                     <label className={labelClass}>
                                         IFSC Code
                                     </label>
+
                                     <input
                                         name="bankIFSC"
                                         value={form.bankIFSC}
@@ -724,42 +853,52 @@ export default function EmployeeDetail() {
                                     label="First Name"
                                     value={employee.firstName}
                                 />
+
                                 <StaticField
                                     label="Last Name"
                                     value={employee.lastName}
                                 />
+
                                 <StaticField
                                     label="Email"
                                     value={employee.email}
                                 />
+
                                 <StaticField
                                     label="Phone"
                                     value={employee.phone || ""}
                                 />
+
                                 <StaticField
                                     label="Gender"
                                     value={employee.gender || ""}
                                 />
+
                                 <StaticField
                                     label="City"
                                     value={employee.city || ""}
                                 />
+
                                 <StaticField
                                     label="State"
                                     value={employee.state || ""}
                                 />
+
                                 <StaticField
                                     label="Country"
                                     value={employee.country || ""}
                                 />
+
                                 <StaticField
                                     label="Bank Name"
                                     value={employee.bankName || ""}
                                 />
+
                                 <StaticField
                                     label="Account No"
                                     value={employee.bankAccountNo || ""}
                                 />
+
                                 <StaticField
                                     label="IFSC Code"
                                     value={employee.bankIFSC || ""}

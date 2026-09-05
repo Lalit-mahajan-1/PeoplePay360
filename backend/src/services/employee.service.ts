@@ -291,7 +291,6 @@ export class EmployeeService {
       'bankName',
       'bankAccountNo',
       'bankIFSC',
-      'avatarUrl',
     ];
 
     const sanitized: Record<string, any> = {};
@@ -329,6 +328,17 @@ export class EmployeeService {
       userId: authUser.userId,
     });
 
+    return updated;
+  }
+  async updateAvatar(employeeId: string, avatarUrl: string | null, authUser: AuthUser) {
+    const existing = await prisma.employee.findUnique({ where: { id: employeeId } });
+    if (!existing) throw { status: 404, message: 'Employee profile not found' };
+    if (existing.status === 'ARCHIVED') throw { status: 403, message: 'Your account has been archived' };
+    const updated = await prisma.employee.update({
+      where: { id: employeeId }, data: { avatarUrl },
+      include: { department: { select: { id: true, name: true, code: true } }, manager: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    });
+    await createAuditLog({ action: avatarUrl ? 'UPLOAD' : 'DELETE', module: 'EMPLOYEE_AVATAR', recordId: employeeId, details: avatarUrl ? 'Uploaded profile image' : 'Removed profile image', userId: authUser.userId });
     return updated;
   }
 }

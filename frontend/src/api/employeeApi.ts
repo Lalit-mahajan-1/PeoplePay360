@@ -20,6 +20,15 @@ export const getMyProfile = () =>
 
 export const updateMyProfile = (data: Partial<EmployeeProfile>) =>
   API.put<{ success: boolean; data: EmployeeProfile }>('/employees/me', data);
+export const uploadMyAvatar = async (file: File) => {
+  const body = await file.arrayBuffer();
+  return API.put<{ success: boolean; data: EmployeeProfile }>('/employees/me/avatar', body, {
+    headers: { 'Content-Type': file.type },
+  });
+};
+
+export const deleteMyAvatar = () =>
+  API.delete<{ success: boolean; data: EmployeeProfile }>('/employees/me/avatar');
 
 // ── Attendance (ready for when you build those routes) ──
 export const getMyAttendance = (month: string) =>
