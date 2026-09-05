@@ -105,8 +105,6 @@ export class PayrollService {
         firstName: true,
         lastName: true,
         email: true,
-        department: { select: { id: true, name: true } },
-        jobPosition: true,
         contracts: {
           where: {
             status: 'ACTIVE',
@@ -118,6 +116,8 @@ export class PayrollService {
             id: true,
             wage: true,
             currencyCode: true,
+            jobPosition: true,
+            department: { select: { id: true, name: true } },
           },
           take: 1,
         },
@@ -296,7 +296,7 @@ export class PayrollService {
           payrunId,
           severity: 'WARNING',
           code: 'NO_BANK_DETAILS',
-          message: `${employee.employeeName || employee.firstName}: Missing bank account details`,
+          message: `${employee.firstName} ${employee.lastName}: Missing bank account details`,
         });
       }
 
@@ -553,7 +553,6 @@ export class PayrollService {
             email: true,
             bankName: true,
             bankAccountNo: true,
-            department: { select: { id: true, name: true } },
           },
         },
         contract: {

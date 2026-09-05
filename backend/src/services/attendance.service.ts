@@ -3,6 +3,7 @@ import { createAuditLog } from './audit.service';
 import { AuthUser } from '../middleware/auth.middleware';
 
 const WEEKDAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+const WEEKDAY_MAP = WEEKDAYS;
 const GRACE_MINUTES = 15;
 const STANDARD_WORK_MINUTES = 480; // 8 hours
 const STANDARD_BREAK_MINUTES = 60;

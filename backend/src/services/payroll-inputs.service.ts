@@ -16,9 +16,6 @@ export class PayrollInputsService {
         // 1. Fetch employee
         const employee = await prisma.employee.findUnique({
             where: { id: employeeId },
-            include: {
-                department: { select: { id: true, name: true } },
-            },
         });
 
         if (!employee || employee.status === 'ARCHIVED') {
