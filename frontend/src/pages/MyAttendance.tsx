@@ -107,8 +107,13 @@ export default function MyAttendance() {
   }, [loadData]);
 
   const formatWorkedHours = (minutes: number) => {
-    if (!minutes || minutes <= 0) return '0.0 hrs';
-    return `${(minutes / 60).toFixed(1)} hrs`;
+    const rounded = Math.max(0, Math.round(minutes / 15) * 15);
+    const hours = Math.floor(rounded / 60);
+    const remainder = rounded % 60;
+    if (!rounded) return '0 hrs';
+    if (!remainder) return `${hours} hrs`;
+    if (remainder === 30) return `${hours}.5 hrs`;
+    return `${hours} hrs ${remainder} mins`;
   };
 
   const formatTimeStr = (isoStr: string | null) => {
@@ -186,7 +191,7 @@ export default function MyAttendance() {
       {/* Top Title & Month Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">My Attendance</h1>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Attendance</h1>
           <p className="text-sm text-gray-500 mt-1">
             Track your daily check-ins, working hours, and monthly attendance logs
           </p>

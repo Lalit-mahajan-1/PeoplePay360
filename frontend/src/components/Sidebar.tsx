@@ -102,7 +102,7 @@ export default function Sidebar() {
                     icon: User,
                 },
                 {
-                    label: "My Attendance",
+                    label: "Attendance",
                     path: "/attendance",
                     icon: Clock,
                 },

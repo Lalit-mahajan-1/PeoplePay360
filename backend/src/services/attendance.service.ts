@@ -5,18 +5,100 @@ import { AuthUser } from '../middleware/auth.middleware';
 const WEEKDAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
 const GRACE_MINUTES = 15;
 const STANDARD_WORK_MINUTES = 480; // 8 hours
-const STANDARD_START_HOUR = 9; // 9:00 AM
+const STANDARD_BREAK_MINUTES = 60;
+const STANDARD_START_MINUTES = 9 * 60;
+const BUSINESS_TIME_ZONE = process.env.ATTENDANCE_TIME_ZONE || 'Asia/Kolkata';
+
+type ScheduleContext = {
+  weekday: (typeof WEEKDAYS)[number];
+  isWorkingDay: boolean;
+  startMinutes: number;
+  endMinutes: number;
+  breakMinutes: number;
+  expectedMinutes: number;
+};
+
+function businessParts(date: Date) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+  return { year: value('year'), month: value('month'), day: value('day'), hour: value('hour'), minute: value('minute') };
+}
 
 function getTodayDate(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const { year, month, day } = businessParts(new Date());
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
 function diffMinutes(a: Date, b: Date): number {
   return Math.round((a.getTime() - b.getTime()) / 60000);
 }
 
+function timeToMinutes(time: Date): number {
+  return time.getUTCHours() * 60 + time.getUTCMinutes();
+}
+
 export class AttendanceService {
+  private async getScheduleContext(employeeId: string, workDate: Date): Promise<ScheduleContext> {
+    const weekday = WEEKDAYS[workDate.getUTCDay()];
+    const contract = await prisma.contract.findFirst({
+      where: {
+        employeeId,
+        status: 'ACTIVE',
+        startDate: { lte: workDate },
+        OR: [{ endDate: null }, { endDate: { gte: workDate } }],
+      },
+      orderBy: { startDate: 'desc' },
+      include: { workingSchedule: { include: { days: { where: { weekday } } } } },
+    });
+
+    const employeeSchedule = contract?.workingSchedule
+      ? null
+      : await prisma.employee.findUnique({
+          where: { id: employeeId },
+          select: { workingSchedule: { include: { days: { where: { weekday } } } } },
+        });
+    const schedule = contract?.workingSchedule || employeeSchedule?.workingSchedule;
+    const scheduleDay = schedule?.days[0];
+
+    if (schedule) {
+      if (!scheduleDay) {
+        return { weekday, isWorkingDay: false, startMinutes: 0, endMinutes: 0, breakMinutes: 0, expectedMinutes: 0 };
+      }
+      const startMinutes = timeToMinutes(scheduleDay.startTime);
+      let endMinutes = timeToMinutes(scheduleDay.endTime);
+      if (endMinutes <= startMinutes) endMinutes += 24 * 60;
+      const expectedMinutes = Math.max(0, endMinutes - startMinutes - scheduleDay.breakMinutes);
+      return { weekday, isWorkingDay: expectedMinutes > 0, startMinutes, endMinutes, breakMinutes: scheduleDay.breakMinutes, expectedMinutes };
+    }
+
+    const isWorkingDay = workDate.getUTCDay() >= 1 && workDate.getUTCDay() <= 5;
+    return {
+      weekday,
+      isWorkingDay,
+      startMinutes: STANDARD_START_MINUTES,
+      endMinutes: STANDARD_START_MINUTES + STANDARD_WORK_MINUTES + STANDARD_BREAK_MINUTES,
+      breakMinutes: STANDARD_BREAK_MINUTES,
+      expectedMinutes: isWorkingDay ? STANDARD_WORK_MINUTES : 0,
+    };
+  }
+
+  private calculateHours(checkIn: Date, checkOut: Date, schedule: ScheduleContext) {
+    const workedMinutes = Math.max(0, diffMinutes(checkOut, checkIn) - schedule.breakMinutes);
+    return {
+      workedMinutes,
+      overtimeMinutes: Math.max(0, workedMinutes - schedule.expectedMinutes),
+      status: workedMinutes > 0 && schedule.expectedMinutes > 0 && workedMinutes < schedule.expectedMinutes / 2 ? 'HALF_DAY' : undefined,
+    };
+  }
+
   /**
    * Resolve the employeeId for the logged-in user.
    */
@@ -66,9 +148,7 @@ export class AttendanceService {
   async getToday(authUser: AuthUser) {
     const employeeId = await this.resolveEmployeeId(authUser);
     const today = getTodayDate();
-    const dayOfWeek = today.getUTCDay();
-    const weekday = WEEKDAYS[dayOfWeek];
-    const isWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 5; // Mon-Fri
+    const schedule = await this.getScheduleContext(employeeId, today);
 
     const record = await prisma.attendance.findUnique({
       where: {
@@ -83,12 +163,9 @@ export class AttendanceService {
       exists: !!record,
       record,
       schedule: {
-        weekday,
-        isWorkingDay,
-        startTime: '09:00 AM',
-        endTime: '06:00 PM',
-        breakMinutes: 60,
-        expectedMinutes: STANDARD_WORK_MINUTES,
+        ...schedule,
+        startTime: `${String(Math.floor(schedule.startMinutes / 60) % 24).padStart(2, '0')}:${String(schedule.startMinutes % 60).padStart(2, '0')}`,
+        endTime: `${String(Math.floor(schedule.endMinutes / 60) % 24).padStart(2, '0')}:${String(schedule.endMinutes % 60).padStart(2, '0')}`,
       },
     };
   }
@@ -97,6 +174,7 @@ export class AttendanceService {
     const employeeId = await this.resolveEmployeeId(authUser);
     const now = new Date();
     const today = getTodayDate();
+    const schedule = await this.getScheduleContext(employeeId, today);
 
     // Check if already checked in today
     const existing = await prisma.attendance.findUnique({
@@ -110,9 +188,8 @@ export class AttendanceService {
     }
 
     // Determine status (PRESENT vs LATE)
-    const checkInHour = now.getHours();
-    const checkInMin = now.getMinutes();
-    const isLate = checkInHour > STANDARD_START_HOUR || (checkInHour === STANDARD_START_HOUR && checkInMin > GRACE_MINUTES);
+    const businessTime = businessParts(now);
+    const isLate = businessTime.hour * 60 + businessTime.minute > schedule.startMinutes + GRACE_MINUTES;
 
     const record = await prisma.attendance.create({
       data: {
@@ -140,6 +217,7 @@ export class AttendanceService {
     const employeeId = await this.resolveEmployeeId(authUser);
     const now = new Date();
     const today = getTodayDate();
+    const schedule = await this.getScheduleContext(employeeId, today);
 
     const record = await prisma.attendance.findUnique({
       where: {
@@ -157,15 +235,11 @@ export class AttendanceService {
       throw { status: 400, message: 'Check-in time is missing. Contact HR.' };
     }
 
-    const totalDiff = diffMinutes(now, new Date(record.checkIn));
-    const breakMinutes = 60; // 1 hr break
-    const workedMinutes = Math.max(0, totalDiff - breakMinutes);
-    const overtimeMinutes = Math.max(0, workedMinutes - STANDARD_WORK_MINUTES);
+    const calculated = this.calculateHours(new Date(record.checkIn), now, schedule);
+    const { workedMinutes, overtimeMinutes } = calculated;
 
     let status = record.status;
-    if (workedMinutes < STANDARD_WORK_MINUTES / 2 && workedMinutes > 0) {
-      status = 'HALF_DAY';
-    }
+    if (calculated.status) status = calculated.status as any;
 
     const updated = await prisma.attendance.update({
       where: { id: record.id },
@@ -289,20 +363,37 @@ export class AttendanceService {
   async getAll(filters: {
     employeeId?: string;
     departmentId?: string;
+    search?: string;
+    date?: string;
     from?: string;
     to?: string;
     status?: string;
     page?: number;
     limit?: number;
   }) {
-    const page = filters.page || 1;
-    const limit = filters.limit || 50;
+    const page = Math.max(1, filters.page || 1);
+    const limit = Math.min(100, Math.max(1, filters.limit || 25));
     const skip = (page - 1) * limit;
 
     const where: any = {};
 
     if (filters.employeeId) where.employeeId = filters.employeeId;
-    if (filters.departmentId) where.employee = { departmentId: filters.departmentId };
+    const employeeWhere: any = {};
+    if (filters.departmentId) employeeWhere.departmentId = filters.departmentId;
+    if (filters.search?.trim()) {
+      const search = filters.search.trim();
+      employeeWhere.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { employeeCode: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (Object.keys(employeeWhere).length) where.employee = employeeWhere;
+
+    if (filters.date && /^\d{4}-\d{2}-\d{2}$/.test(filters.date)) {
+      where.workDate = new Date(`${filters.date}T00:00:00.000Z`);
+    }
 
     if (filters.from || filters.to) {
       where.workDate = {};
@@ -327,7 +418,7 @@ export class AttendanceService {
           },
           correctedBy: { select: { id: true, email: true } },
         },
-        orderBy: [{ workDate: 'desc' }],
+        orderBy: [{ workDate: 'desc' }, { updatedAt: 'desc' }],
         skip,
         take: limit,
       }),
@@ -373,6 +464,7 @@ export class AttendanceService {
       status?: string;
       notes?: string;
       workedMinutes?: number;
+      overtimeMinutes?: number;
     },
     authUser: AuthUser
   ) {
@@ -390,14 +482,20 @@ export class AttendanceService {
     if (updates.status) data.status = updates.status as any;
     if (updates.notes !== undefined) data.notes = updates.notes;
 
+    const schedule = await this.getScheduleContext(existing.employeeId, existing.workDate);
     const checkInTime = data.checkIn || existing.checkIn;
     const checkOutTime = data.checkOut || existing.checkOut;
 
     if (checkInTime && checkOutTime) {
-      const diff = diffMinutes(checkOutTime, checkInTime);
-      data.workedMinutes = updates.workedMinutes ?? Math.max(0, diff - 60);
+      const calculated = this.calculateHours(checkInTime, checkOutTime, schedule);
+      data.workedMinutes = updates.workedMinutes ?? calculated.workedMinutes;
+      data.overtimeMinutes = updates.overtimeMinutes ?? Math.max(0, data.workedMinutes - schedule.expectedMinutes);
+      if (!updates.status && calculated.status) data.status = calculated.status;
     } else if (updates.workedMinutes !== undefined) {
       data.workedMinutes = updates.workedMinutes;
+      data.overtimeMinutes = updates.overtimeMinutes ?? Math.max(0, updates.workedMinutes - schedule.expectedMinutes);
+    } else if (updates.overtimeMinutes !== undefined) {
+      data.overtimeMinutes = updates.overtimeMinutes;
     }
 
     const updated = await prisma.attendance.update({
@@ -419,6 +517,71 @@ export class AttendanceService {
     });
 
     return updated;
+  }
+
+  async createMedicalAbsence(
+    data: { employeeId: string; workDate: string; notes: string },
+    authUser: AuthUser
+  ) {
+    const workDate = new Date(`${data.workDate}T00:00:00.000Z`);
+    const employee = await prisma.employee.findUnique({ where: { id: data.employeeId } });
+    if (!employee) throw { status: 404, message: 'Employee not found' };
+
+    const existing = await prisma.attendance.findUnique({
+      where: { employeeId_workDate: { employeeId: data.employeeId, workDate } },
+    });
+    if (existing) {
+      throw { status: 409, message: 'An attendance record already exists for this employee and date' };
+    }
+    const record = await prisma.attendance.create({
+      data: {
+        employeeId: data.employeeId,
+        workDate,
+        status: 'ABSENT',
+        notes: data.notes.trim(),
+        isManualEdit: true,
+        correctedById: authUser.userId,
+        correctedAt: new Date(),
+      },
+    });
+
+    await createAuditLog({
+      action: 'MEDICAL_ABSENCE', module: 'ATTENDANCE', recordId: record.id,
+      details: `Recorded medical absence for ${employee.firstName} ${employee.lastName} on ${data.workDate}`,
+      userId: authUser.userId,
+    });
+    return record;
+  }
+
+  async closeDay(workDateInput: string | undefined, authUser: AuthUser) {
+    const workDate = workDateInput
+      ? new Date(`${workDateInput}T00:00:00.000Z`)
+      : getTodayDate();
+    const contracts = await prisma.contract.findMany({
+      where: {
+        status: 'ACTIVE',
+        startDate: { lte: workDate },
+        OR: [{ endDate: null }, { endDate: { gte: workDate } }],
+        employee: { status: 'ACTIVE' },
+      },
+      select: { employeeId: true },
+    });
+    let created = 0;
+    for (const employeeId of new Set(contracts.map((contract) => contract.employeeId))) {
+      const schedule = await this.getScheduleContext(employeeId, workDate);
+      if (!schedule.isWorkingDay) continue;
+      const result = await prisma.attendance.createMany({
+        data: [{ employeeId, workDate, status: 'ABSENT', notes: 'Automatically marked absent at end of day' }],
+        skipDuplicates: true,
+      });
+      created += result.count;
+    }
+    await createAuditLog({
+      action: 'CLOSE_DAY', module: 'ATTENDANCE',
+      details: `End-of-day absence check completed for ${workDate.toISOString().slice(0, 10)}; ${created} absences created`,
+      userId: authUser.userId,
+    });
+    return { workDate, created, eligibleEmployees: new Set(contracts.map((contract) => contract.employeeId)).size };
   }
 
   async bulkMark(

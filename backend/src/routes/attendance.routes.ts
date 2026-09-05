@@ -9,12 +9,16 @@ import {
   getAttendanceById,
   correctAttendance,
   bulkMarkAttendance,
+  createMedicalAbsence,
+  closeAttendanceDay,
 } from '../controllers/attendance.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { authorize } from '../middleware/role.middleware';
 import {
   validateCorrection,
   validateBulkMark,
+  validateMedicalAbsence,
+  validateCloseDay,
 } from '../validators/attendance.validator';
 
 const router = Router();
@@ -53,6 +57,8 @@ router.get('/my-history', authorize(ALL_ROLES), getMyHistory);
 // ──────────────────────────────────────────────
 
 router.get('/', authorize(HR_ROLES), getAllAttendance);
+router.post('/', authorize(HR_ROLES), validateMedicalAbsence, createMedicalAbsence);
+router.post('/close-day', authorize(HR_ROLES), validateCloseDay, closeAttendanceDay);
 router.get('/:id', authorize(HR_ROLES), getAttendanceById);
 router.put(
   '/:id',

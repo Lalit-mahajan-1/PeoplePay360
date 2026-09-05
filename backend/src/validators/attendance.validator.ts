@@ -16,7 +16,11 @@ export const validateCorrection = (
     next: NextFunction
 ): void => {
     const errors: string[] = [];
-    const { checkIn, checkOut, status, workedMinutes } = req.body;
+    const { checkIn, checkOut, status, workedMinutes, overtimeMinutes, notes } = req.body;
+
+    if (typeof notes !== 'string' || !notes.trim()) {
+        errors.push('notes are required for an attendance correction');
+    }
 
     if (checkIn && isNaN(Date.parse(checkIn))) {
         errors.push('checkIn must be a valid date/time string');
@@ -40,6 +44,10 @@ export const validateCorrection = (
         if (typeof workedMinutes !== 'number' || workedMinutes < 0) {
             errors.push('workedMinutes must be a non-negative number');
         }
+    }
+
+    if (overtimeMinutes !== undefined && (typeof overtimeMinutes !== 'number' || overtimeMinutes < 0)) {
+        errors.push('overtimeMinutes must be a non-negative number');
     }
 
     if (errors.length > 0) {
@@ -83,5 +91,27 @@ export const validateBulkMark = (
         return;
     }
 
+    next();
+};
+
+export const validateMedicalAbsence = (req: Request, res: Response, next: NextFunction): void => {
+    const { employeeId, workDate, notes } = req.body;
+    const errors: string[] = [];
+    if (typeof employeeId !== 'string' || !employeeId.trim()) errors.push('employeeId is required');
+    if (!workDate || !/^\d{4}-\d{2}-\d{2}$/.test(workDate)) errors.push('workDate must be YYYY-MM-DD');
+    if (typeof notes !== 'string' || !notes.trim()) errors.push('notes are required for a medical absence');
+    if (errors.length) {
+        res.status(400).json({ success: false, message: 'Validation failed', errors });
+        return;
+    }
+    next();
+};
+
+export const validateCloseDay = (req: Request, res: Response, next: NextFunction): void => {
+    const { workDate } = req.body;
+    if (workDate !== undefined && (typeof workDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(workDate))) {
+        res.status(400).json({ success: false, message: 'workDate must be YYYY-MM-DD' });
+        return;
+    }
     next();
 };

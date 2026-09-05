@@ -8,7 +8,7 @@ import EmployeeDetail from "./pages/EmployeeDetail";
 import Users from "./pages/Users";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import MyProfile from "./pages/MyProfile";
-import MyAttendance from "./pages/MyAttendance";
+import AttendancePage from "./pages/AttendancePage";
 import MyLeaves from "./pages/MyLeaves";
 import MyPayslips from "./pages/MyPayslips";
 import TeamDirectory from "./pages/TeamDirectory";
@@ -120,7 +120,7 @@ function AppRoutes() {
                 path="/attendance"
                 element={
                     <PrivateRoute>
-                        <MyAttendance />
+                        <AttendancePage />
                     </PrivateRoute>
                 }
             />

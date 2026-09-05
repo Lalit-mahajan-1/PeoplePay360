@@ -35,6 +35,16 @@ interface AttendanceWidgetProps {
   onStatusChange?: () => void;
 }
 
+function formatDuration(minutes: number): string {
+  const rounded = Math.max(0, Math.round(minutes / 15) * 15);
+  const hours = Math.floor(rounded / 60);
+  const remainder = rounded % 60;
+  if (!rounded) return '0 hrs';
+  if (!remainder) return `${hours} hrs`;
+  if (remainder === 30) return `${hours}.5 hrs`;
+  return `${hours} hrs ${remainder} mins`;
+}
+
 export default function AttendanceWidget({ onStatusChange }: AttendanceWidgetProps) {
   const [todayData, setTodayData] = useState<TodayResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,7 +153,6 @@ export default function AttendanceWidget({ onStatusChange }: AttendanceWidgetPro
   }
 
   const record = todayData?.record;
-  const schedule = todayData?.schedule;
   const isCheckedIn = !!record?.checkIn && !record?.checkOut;
   const isCheckedOut = !!record?.checkIn && !!record?.checkOut;
 
@@ -182,14 +191,7 @@ export default function AttendanceWidget({ onStatusChange }: AttendanceWidgetPro
         </div>
       </div>
 
-      {/* Weekend / Non-working day message */}
-      {schedule && !schedule.isWorkingDay ? (
-        <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 text-center space-y-1">
-          <p className="text-sm font-bold text-purple-800">Non-Working Day</p>
-          <p className="text-xs text-purple-600">Today is scheduled as a weekend or holiday.</p>
-        </div>
-      ) : (
-        <>
+      <>
           {/* Status Details */}
           {!record ? (
             /* Not checked in yet */
@@ -275,13 +277,12 @@ export default function AttendanceWidget({ onStatusChange }: AttendanceWidgetPro
                 </div>
                 <div>
                   <span className="text-blue-600 block text-[11px]">Total Worked</span>
-                  <span className="font-bold">{(record.workedMinutes / 60).toFixed(1)} hrs</span>
+                  <span className="font-bold">{formatDuration(record.workedMinutes)}</span>
                 </div>
               </div>
             </div>
           ) : null}
-        </>
-      )}
+      </>
     </div>
   );
 }

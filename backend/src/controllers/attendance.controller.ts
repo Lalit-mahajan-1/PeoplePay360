@@ -109,6 +109,8 @@ export const getAllAttendance = async (
         const filters = {
             employeeId: req.query.employeeId as string | undefined,
             departmentId: req.query.departmentId as string | undefined,
+            search: req.query.search as string | undefined,
+            date: req.query.date as string | undefined,
             from: req.query.from as string | undefined,
             to: req.query.to as string | undefined,
             status: req.query.status as string | undefined,
@@ -190,5 +192,33 @@ export const bulkMarkAttendance = async (
         }
         console.error('Bulk mark error:', error);
         res.status(500).json({ success: false, message: 'Bulk mark failed' });
+    }
+};
+
+export const createMedicalAbsence = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const record = await attendanceService.createMedicalAbsence(req.body, req.user!);
+        res.status(201).json({ success: true, data: record });
+    } catch (error: any) {
+        if (error.status) {
+            res.status(error.status).json({ success: false, message: error.message });
+            return;
+        }
+        console.error('Medical absence error:', error);
+        res.status(500).json({ success: false, message: 'Failed to record medical absence' });
+    }
+};
+
+export const closeAttendanceDay = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const result = await attendanceService.closeDay(req.body.workDate, req.user!);
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        if (error.status) {
+            res.status(error.status).json({ success: false, message: error.message });
+            return;
+        }
+        console.error('End-of-day attendance error:', error);
+        res.status(500).json({ success: false, message: 'Failed to close attendance day' });
     }
 };
