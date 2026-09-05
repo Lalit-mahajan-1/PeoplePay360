@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import {
     Plus,
     Search,
@@ -64,6 +65,8 @@ const INPUT_SOURCES = [
 ];
 
 export default function SalaryRules() {
+    const { hasRole } = useAuth();
+    const canDelete = hasRole(['ADMIN', 'HR_PAYROLL_MANAGER']);
     const [rules, setRules] = useState<SalaryRule[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -340,13 +343,15 @@ export default function SalaryRules() {
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleDelete(rule.id, rule.name)}
-                                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
-                                                        title="Delete Rule"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                    {canDelete && (
+                                                        <button
+                                                            onClick={() => handleDelete(rule.id, rule.name)}
+                                                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                                                            title="Delete Rule"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

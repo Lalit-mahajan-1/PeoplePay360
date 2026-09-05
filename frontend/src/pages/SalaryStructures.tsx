@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import {
     Layers,
     Plus,
@@ -37,6 +38,8 @@ interface SalaryStructure {
 }
 
 export default function SalaryStructures() {
+    const { hasRole } = useAuth();
+    const canDelete = hasRole(['ADMIN', 'HR_PAYROLL_MANAGER']);
     const [structures, setStructures] = useState<SalaryStructure[]>([]);
     const [availableRules, setAvailableRules] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -321,16 +324,18 @@ export default function SalaryStructures() {
                                                         >
                                                             <Edit2 className="w-4 h-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDelete(struct.id, struct.name);
-                                                            }}
-                                                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
-                                                            title="Delete Structure"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                        {canDelete && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDelete(struct.id, struct.name);
+                                                                }}
+                                                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                                                                title="Delete Structure"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
