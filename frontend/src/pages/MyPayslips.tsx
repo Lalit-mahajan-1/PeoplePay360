@@ -3,6 +3,7 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Wallet, Calendar, Printer, FileText, ArrowRight, CheckCircle2 } from 'lucide-react';
 import PayslipBreakdown from '../components/PayslipBreakdown';
+import { downloadPayslipPDF } from '../utils/pdfGenerator';
 
 const fmt = (n: number | null | undefined) =>
     `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
@@ -114,12 +115,10 @@ export default function MyPayslips() {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-                                                        const token = localStorage.getItem('token');
-                                                        window.open(`${apiUrl}/reports/payslip/${ps.id}/print?token=${token}`, '_blank');
+                                                        downloadPayslipPDF(ps);
                                                     }}
                                                     className="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition inline-flex items-center gap-1 cursor-pointer"
-                                                    title="View PDF Statement"
+                                                    title="Download PDF Statement"
                                                 >
                                                     <Printer className="w-3.5 h-3.5" /> PDF
                                                 </button>

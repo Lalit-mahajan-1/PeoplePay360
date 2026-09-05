@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { ArrowLeft, ArrowUpRight, CalendarDays, Building2, Wallet, BadgeCheck, Banknote, AlertTriangle, Info, Shield, Mail, FileDown, Award } from "lucide-react";
+import { downloadPayslipPDF } from "../utils/pdfGenerator";
 
 const fmt = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
 const CAT_STYLES: Record<string, any> = {
@@ -51,13 +52,13 @@ export default function PayslipDetailPage() {
                     <ArrowLeft className="w-4 h-4" /> Back
                 </button>
                 <div className="flex gap-2">
-                    <a href={printUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 shadow-sm transition">
+                    <button onClick={() => downloadPayslipPDF(ps, 'payslip-detail-card')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 shadow-sm transition cursor-pointer">
                         <FileDown className="w-4 h-4" /> Download / Print PDF
-                    </a>
+                    </button>
                 </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+            <div id="payslip-detail-card" className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
                 <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 p-6 md:p-8 text-white relative overflow-hidden">
                     <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/15 blur-3xl" />
                     <div className="absolute -bottom-16 -left-10 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
@@ -225,9 +226,9 @@ export default function PayslipDetailPage() {
 
             <div className="mt-6 flex items-center justify-center gap-3">
                 <Link to={`/payroll/payruns/${ps.payrunId}`} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 transition">← View Parent Pay Run</Link>
-                <a href={printUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-lg shadow-indigo-600/30 transition">
+                <button onClick={() => downloadPayslipPDF(ps, 'payslip-detail-card')} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-lg shadow-indigo-600/30 transition cursor-pointer">
                     <FileDown className="w-4 h-4" /> Print / Save PDF
-                </a>
+                </button>
             </div>
         </div>
     );

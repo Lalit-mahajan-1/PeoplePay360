@@ -16,6 +16,7 @@ import {
     FileText,
 } from 'lucide-react';
 import WarningPanel from './WarningPanel';
+import { downloadPayslipPDF } from '../utils/pdfGenerator';
 
 interface PayslipLine {
     id?: string;
@@ -83,14 +84,11 @@ export default function PayslipBreakdown({ payslip, onClose }: PayslipBreakdownP
     const netCalculated = Number(payslip.netAmount) || grossCalculated - deductionTotal;
 
     const handlePrint = () => {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const token = localStorage.getItem('token');
-        const printUrl = `${apiUrl}/payroll/payslips/${payslip.id}/print?token=${token}`;
-        window.open(printUrl, '_blank');
+        downloadPayslipPDF(payslip, 'payslip-breakdown-card');
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-4xl w-full border border-gray-100 flex flex-col max-h-[90vh]">
+        <div id="payslip-breakdown-card" className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-4xl w-full border border-gray-100 flex flex-col max-h-[90vh]">
             {/* Header */}
             <div className="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
