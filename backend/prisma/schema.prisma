@@ -59,7 +59,7 @@ model User {
   employeeId String?   @unique
   employee   Employee? @relation(fields: [employeeId], references: [id])
 
-  auditLogs AuditLog[]
+  auditLogs             AuditLog[]
   attendanceCorrections Attendance[] @relation("AttendanceCorrectedBy")
 
   createdAt DateTime @default(now())
@@ -69,15 +69,15 @@ model User {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  action     String
-  module     String
-  recordId   String?
-  details    String?
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  ipAddress  String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  action    String
+  module    String
+  recordId  String?
+  details   String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  ipAddress String?
+  createdAt DateTime @default(now())
 
   @@map("audit_logs")
 }
@@ -102,32 +102,32 @@ model Department {
 }
 
 model Employee {
-  id            String         @id @default(cuid())
-  employeeCode  String         @unique
-  firstName     String
-  lastName      String
-  email         String         @unique
-  phone         String?
-  dateOfBirth   DateTime?
-  gender        Gender?
+  id           String         @id @default(cuid())
+  employeeCode String         @unique
+  firstName    String
+  lastName     String
+  email        String         @unique
+  phone        String?
+  dateOfBirth  DateTime?
+  gender       Gender?
 
-  departmentId  String?
-  department    Department?    @relation(fields: [departmentId], references: [id])
-  jobPosition   String?
-  jobTitle      String?
-  managerId     String?
-  manager       Employee?      @relation("ManagerSubordinates", fields: [managerId], references: [id])
-  subordinates  Employee[]     @relation("ManagerSubordinates")
+  departmentId String?
+  department   Department?    @relation(fields: [departmentId], references: [id])
+  jobPosition  String?
+  jobTitle     String?
+  managerId    String?
+  manager      Employee?      @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  subordinates Employee[]     @relation("ManagerSubordinates")
 
-  hireDate      DateTime       @default(now())
-  status        EmployeeStatus @default(ACTIVE)
-  employeeType  EmployeeType   @default(FULL_TIME)
+  hireDate     DateTime       @default(now())
+  status       EmployeeStatus @default(ACTIVE)
+  employeeType EmployeeType   @default(FULL_TIME)
 
-  address    String?
-  city       String?
-  state      String?
-  country    String?
-  postalCode String?
+  address      String?
+  city         String?
+  state        String?
+  country      String?
+  postalCode   String?
 
   bankName      String?
   bankAccountNo String?
@@ -135,7 +135,7 @@ model Employee {
 
   avatarUrl String?
 
-  user User?
+  user              User?
   attendanceRecords Attendance[] @relation("EmployeeAttendance")
 
   createdAt DateTime @default(now())

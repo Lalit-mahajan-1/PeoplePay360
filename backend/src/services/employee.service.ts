@@ -29,6 +29,11 @@ interface CreateEmployeeData {
 }
 
 export class EmployeeService {
+
+  // ──────────────────────────────────────────────
+  // ADMIN / HR METHODS (Existing)
+  // ──────────────────────────────────────────────
+
   async getAll(filters: {
     status?: string;
     departmentId?: string;
@@ -158,7 +163,6 @@ export class EmployeeService {
       },
     });
 
-    // Audit log
     await createAuditLog({
       action: 'CREATE',
       module: 'EMPLOYEE',
@@ -219,7 +223,6 @@ export class EmployeeService {
       throw { status: 404, message: 'Employee not found' };
     }
 
-    // Soft delete - set status to ARCHIVED
     await prisma.employee.update({
       where: { id },
       data: { status: 'ARCHIVED' },
@@ -232,6 +235,101 @@ export class EmployeeService {
       details: `Archived employee ${existing.firstName} ${existing.lastName} (${existing.employeeCode})`,
       userId: authUser.userId,
     });
+  }
+
+  // ──────────────────────────────────────────────
+  // EMPLOYEE SELF-SERVICE METHODS (NEW)
+  // ──────────────────────────────────────────────
+
+  async getMyProfile(employeeId: string) {
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+      include: {
+        department: {
+          select: { id: true, name: true, code: true },
+        },
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            jobTitle: true,
+          },
+        },
+      },
+    });
+
+    if (!employee) {
+      throw { status: 404, message: 'Employee profile not found' };
+    }
+
+    if (employee.status === 'ARCHIVED') {
+      throw { status: 403, message: 'Your account has been archived' };
+    }
+
+    return employee;
+  }
+
+  async updateMyProfile(employeeId: string, updates: any, authUser: AuthUser) {
+    const existing = await prisma.employee.findUnique({
+      where: { id: employeeId },
+    });
+
+    if (!existing) {
+      throw { status: 404, message: 'Employee profile not found' };
+    }
+
+    // ── Whitelist: ONLY these fields can be changed by the employee ──
+    const allowedFields = [
+      'phone',
+      'address',
+      'city',
+      'state',
+      'country',
+      'postalCode',
+      'bankName',
+      'bankAccountNo',
+      'bankIFSC',
+      'avatarUrl',
+    ];
+
+    const sanitized: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (updates[key] !== undefined) {
+        sanitized[key] = updates[key];
+      }
+    }
+
+    if (Object.keys(sanitized).length === 0) {
+      throw {
+        status: 400,
+        message: `No valid fields to update. Allowed: [${allowedFields.join(', ')}]`,
+      };
+    }
+
+    const updated = await prisma.employee.update({
+      where: { id: employeeId },
+      data: sanitized,
+      include: {
+        department: {
+          select: { id: true, name: true, code: true },
+        },
+        manager: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+      },
+    });
+
+    await createAuditLog({
+      action: 'UPDATE',
+      module: 'EMPLOYEE',
+      recordId: employeeId,
+      details: `Employee self-updated fields: [${Object.keys(sanitized).join(', ')}]`,
+      userId: authUser.userId,
+    });
+
+    return updated;
   }
 }
 

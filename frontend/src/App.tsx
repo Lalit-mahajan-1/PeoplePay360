@@ -5,6 +5,13 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
+import EmployeeDashboard from "./pages/EmployeeDashboard";
+import MyProfile from "./pages/MyProfile";
+import MyAttendance from "./pages/MyAttendance";
+import MyLeaves from "./pages/MyLeaves";
+import MyPayslips from "./pages/MyPayslips";
+import TeamDirectory from "./pages/TeamDirectory";
+import AccountSettings from "./pages/AccountSettings";
 import Sidebar from "./components/Sidebar";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -48,7 +55,6 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
     return (
         <div className="min-h-screen flex bg-gray-50">
             <Sidebar />
-            {/* min-w-0 lets the content area shrink/scroll instead of pushing the sidebar off-screen */}
             <main className="flex-1 min-w-0 overflow-y-auto">
                 <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-[1600px]">
                     {children}
@@ -56,6 +62,14 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
             </main>
         </div>
     );
+}
+
+function HomeRoute() {
+    const { user } = useAuth();
+    if (user?.role === 'EMPLOYEE') {
+        return <EmployeeDashboard />;
+    }
+    return <Dashboard />;
 }
 
 function AppRoutes() {
@@ -75,7 +89,7 @@ function AppRoutes() {
                 path="/"
                 element={
                     <PrivateRoute>
-                        <Dashboard />
+                        <HomeRoute />
                     </PrivateRoute>
                 }
             />
@@ -87,12 +101,11 @@ function AppRoutes() {
                     </PrivateRoute>
                 }
             />
-            {/* Placeholder routes for future modules */}
             <Route
-                path="/contracts"
+                path="/profile"
                 element={
                     <PrivateRoute>
-                        <PlaceholderPage title="Contracts" />
+                        <MyProfile />
                     </PrivateRoute>
                 }
             />
@@ -100,7 +113,7 @@ function AppRoutes() {
                 path="/attendance"
                 element={
                     <PrivateRoute>
-                        <PlaceholderPage title="Attendance" />
+                        <MyAttendance />
                     </PrivateRoute>
                 }
             />
@@ -108,7 +121,47 @@ function AppRoutes() {
                 path="/time-off"
                 element={
                     <PrivateRoute>
-                        <PlaceholderPage title="Time Off" />
+                        <MyLeaves />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/payslips"
+                element={
+                    <PrivateRoute>
+                        <MyPayslips />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/directory"
+                element={
+                    <PrivateRoute>
+                        <TeamDirectory />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/admin/employees"
+                element={
+                    <PrivateRoute>
+                        <Dashboard />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/settings"
+                element={
+                    <PrivateRoute>
+                        <AccountSettings />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/contracts"
+                element={
+                    <PrivateRoute>
+                        <PlaceholderPage title="Contracts Management" />
                     </PrivateRoute>
                 }
             />
@@ -116,7 +169,7 @@ function AppRoutes() {
                 path="/payroll"
                 element={
                     <PrivateRoute>
-                        <PlaceholderPage title="Payroll" />
+                        <PlaceholderPage title="Payroll Management" />
                     </PrivateRoute>
                 }
             />
@@ -124,7 +177,7 @@ function AppRoutes() {
                 path="/reports"
                 element={
                     <PrivateRoute>
-                        <PlaceholderPage title="Reports" />
+                        <PlaceholderPage title="Payroll & HR Reports" />
                     </PrivateRoute>
                 }
             />
@@ -143,7 +196,7 @@ function PlaceholderPage({ title }: { title: string }) {
                 {title}
             </h1>
             <p className="text-gray-500 text-[14px] tracking-[-0.005em]">
-                This module is coming soon.
+                This module is under active development.
             </p>
         </div>
     );

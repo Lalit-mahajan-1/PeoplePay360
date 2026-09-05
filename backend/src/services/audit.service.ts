@@ -1,27 +1,29 @@
 import prisma from '../lib/prisma';
 
-interface AuditParams {
+interface AuditLogInput {
   action: string;
   module: string;
   recordId?: string;
   details?: string;
-  userId: string;
-  ipAddress?: string;
+  userId?: string;
 }
 
-export const createAuditLog = async (params: AuditParams): Promise<void> => {
+export const createAuditLog = async (data: AuditLogInput) => {
   try {
+    if (!data.userId) {
+      return;
+    }
     await prisma.auditLog.create({
       data: {
-        action: params.action,
-        module: params.module,
-        recordId: params.recordId,
-        details: params.details,
-        userId: params.userId,
-        ipAddress: params.ipAddress,
+        action: data.action,
+        module: data.module,
+        recordId: data.recordId,
+        details: data.details,
+        userId: data.userId,
       },
     });
   } catch (error) {
-    console.error('Audit log failed:', error);
+    console.error('Failed to write audit log:', error);
+    // Don't throw — audit failure should not break the main operation
   }
 };
