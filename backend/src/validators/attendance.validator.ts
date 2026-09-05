@@ -1,117 +1,97 @@
 import { Request, Response, NextFunction } from 'express';
 
-const VALID_STATUSES = [
-    'PRESENT',
-    'LATE',
-    'ABSENT',
-    'HALF_DAY',
-    'ON_LEAVE',
-    'HOLIDAY',
-    'WEEKEND',
-];
+export const validateCorrection = (req: Request, res: Response, next: NextFunction): void => {
+  const { checkIn, checkOut, status, workedMinutes, overtimeMinutes } = req.body;
 
-export const validateCorrection = (
-    req: Request,
-    res: Response,
-    next: NextFunction
-): void => {
-    const errors: string[] = [];
-    const { checkIn, checkOut, status, workedMinutes, overtimeMinutes, notes } = req.body;
+  const errors: string[] = [];
 
-    if (typeof notes !== 'string' || !notes.trim()) {
-        errors.push('notes are required for an attendance correction');
-    }
+  if (checkIn && isNaN(Date.parse(checkIn))) {
+    errors.push('Invalid checkIn date format');
+  }
 
-    if (checkIn && isNaN(Date.parse(checkIn))) {
-        errors.push('checkIn must be a valid date/time string');
-    }
+  if (checkOut && isNaN(Date.parse(checkOut))) {
+    errors.push('Invalid checkOut date format');
+  }
 
-    if (checkOut && isNaN(Date.parse(checkOut))) {
-        errors.push('checkOut must be a valid date/time string');
-    }
+  if (checkIn && checkOut && new Date(checkIn) >= new Date(checkOut)) {
+    errors.push('checkIn must be before checkOut');
+  }
 
-    if (checkIn && checkOut) {
-        if (new Date(checkOut) <= new Date(checkIn)) {
-            errors.push('checkOut must be after checkIn');
-        }
-    }
+  if (status && !['PRESENT', 'LATE', 'ABSENT', 'HALF_DAY', 'ON_LEAVE', 'HOLIDAY', 'WEEKEND'].includes(status)) {
+    errors.push('Invalid attendance status');
+  }
 
-    if (status && !VALID_STATUSES.includes(status)) {
-        errors.push(`status must be one of: ${VALID_STATUSES.join(', ')}`);
-    }
+  if (workedMinutes !== undefined && (typeof workedMinutes !== 'number' || workedMinutes < 0)) {
+    errors.push('workedMinutes must be a non-negative number');
+  }
 
-    if (workedMinutes !== undefined) {
-        if (typeof workedMinutes !== 'number' || workedMinutes < 0) {
-            errors.push('workedMinutes must be a non-negative number');
-        }
-    }
+  if (overtimeMinutes !== undefined && (typeof overtimeMinutes !== 'number' || overtimeMinutes < 0)) {
+    errors.push('overtimeMinutes must be a non-negative number');
+  }
 
-    if (overtimeMinutes !== undefined && (typeof overtimeMinutes !== 'number' || overtimeMinutes < 0)) {
-        errors.push('overtimeMinutes must be a non-negative number');
-    }
+  if (errors.length > 0) {
+    res.status(400).json({ success: false, message: 'Validation failed', errors });
+    return;
+  }
 
-    if (errors.length > 0) {
-        res.status(400).json({
-            success: false,
-            message: 'Validation failed',
-            errors,
-        });
-        return;
-    }
-
-    next();
+  next();
 };
 
-export const validateBulkMark = (
-    req: Request,
-    res: Response,
-    next: NextFunction
-): void => {
-    const errors: string[] = [];
-    const { workDate, employeeIds, status } = req.body;
+export const validateBulkMark = (req: Request, res: Response, next: NextFunction): void => {
+  const { workDate, employeeIds, status } = req.body;
 
-    if (!workDate || isNaN(Date.parse(workDate))) {
-        errors.push('workDate is required and must be a valid date');
-    }
+  const errors: string[] = [];
 
-    if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
-        errors.push('employeeIds must be a non-empty array');
-    }
+  if (!workDate) errors.push('workDate is required');
+  else if (isNaN(Date.parse(workDate))) errors.push('Invalid workDate format');
 
-    if (!status || !VALID_STATUSES.includes(status)) {
-        errors.push(`status must be one of: ${VALID_STATUSES.join(', ')}`);
-    }
+  if (!employeeIds) errors.push('employeeIds is required');
+  else if (!Array.isArray(employeeIds) || employeeIds.length === 0) errors.push('employeeIds must be a non-empty array');
 
-    if (errors.length > 0) {
-        res.status(400).json({
-            success: false,
-            message: 'Validation failed',
-            errors,
-        });
-        return;
-    }
+  if (!status) errors.push('status is required');
+  else if (!['PRESENT', 'LATE', 'ABSENT', 'HALF_DAY', 'ON_LEAVE', 'HOLIDAY', 'WEEKEND'].includes(status)) {
+    errors.push('Invalid attendance status');
+  }
 
-    next();
+  if (errors.length > 0) {
+    res.status(400).json({ success: false, message: 'Validation failed', errors });
+    return;
+  }
+
+  next();
 };
 
 export const validateMedicalAbsence = (req: Request, res: Response, next: NextFunction): void => {
-    const { employeeId, workDate, notes } = req.body;
-    const errors: string[] = [];
-    if (typeof employeeId !== 'string' || !employeeId.trim()) errors.push('employeeId is required');
-    if (!workDate || !/^\d{4}-\d{2}-\d{2}$/.test(workDate)) errors.push('workDate must be YYYY-MM-DD');
-    if (typeof notes !== 'string' || !notes.trim()) errors.push('notes are required for a medical absence');
-    if (errors.length) {
-        res.status(400).json({ success: false, message: 'Validation failed', errors });
-        return;
-    }
-    next();
+  const { employeeId, workDate, notes } = req.body;
+
+  const errors: string[] = [];
+
+  if (!employeeId) errors.push('employeeId is required');
+  if (!workDate) errors.push('workDate is required');
+  else if (isNaN(Date.parse(workDate))) errors.push('Invalid workDate format');
+  if (!notes || !notes.trim()) errors.push('notes is required for medical absence');
+
+  if (errors.length > 0) {
+    res.status(400).json({ success: false, message: 'Validation failed', errors });
+    return;
+  }
+
+  next();
 };
 
 export const validateCloseDay = (req: Request, res: Response, next: NextFunction): void => {
-    const { workDate } = req.body;
-    if (workDate !== undefined && (typeof workDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(workDate))) {
-        res.status(400).json({ success: false, message: 'workDate must be YYYY-MM-DD' });
-        return;
-    }
-    next();
+  const { workDate } = req.body;
+
+  const errors: string[] = [];
+
+  if (workDate && isNaN(Date.parse(workDate))) {
+    errors.push('Invalid workDate format');
+  }
+
+  if (errors.length > 0) {
+    res.status(400).json({ success: false, message: 'Validation failed', errors });
+    return;
+  }
+
+  next();
 };
