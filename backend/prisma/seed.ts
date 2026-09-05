@@ -57,7 +57,7 @@ async function main() {
     },
   });
 
-  await prisma.employee.upsert({
+  const emp2 = await prisma.employee.upsert({
     where: { employeeCode: 'EMP002' },
     update: {},
     create: {
@@ -104,7 +104,7 @@ async function main() {
     },
   });
 
-  await prisma.employee.upsert({
+  const emp4 = await prisma.employee.upsert({
     where: { employeeCode: 'EMP004' },
     update: {},
     create: {
@@ -123,7 +123,7 @@ async function main() {
     },
   });
 
-  await prisma.employee.upsert({
+  const emp5 = await prisma.employee.upsert({
     where: { employeeCode: 'EMP005' },
     update: {},
     create: {
@@ -180,6 +180,62 @@ async function main() {
   });
 
   console.log('✅ Seed completed!');
+  // Attendance for 4 September 2026. The composite unique key keeps this
+  // idempotent: rerunning the seed updates these records instead of duplicating them.
+  const workDate = new Date('2026-09-04T00:00:00.000Z');
+  const attendanceRecords = [
+    {
+      employeeId: emp1.id,
+      checkIn: new Date('2026-09-04T09:00:00.000Z'),
+      checkOut: new Date('2026-09-04T18:00:00.000Z'),
+      workedMinutes: 480,
+      overtimeMinutes: 60,
+      status: 'PRESENT' as const,
+    },
+    {
+      employeeId: emp2.id,
+      checkIn: new Date('2026-09-04T09:45:00.000Z'),
+      checkOut: new Date('2026-09-04T18:15:00.000Z'),
+      workedMinutes: 480,
+      overtimeMinutes: 0,
+      status: 'LATE' as const,
+    },
+    {
+      employeeId: emp3.id,
+      checkIn: new Date('2026-09-04T09:15:00.000Z'),
+      checkOut: new Date('2026-09-04T18:15:00.000Z'),
+      workedMinutes: 480,
+      overtimeMinutes: 0,
+      status: 'PRESENT' as const,
+    },
+    {
+      employeeId: emp4.id,
+      checkIn: null,
+      checkOut: null,
+      workedMinutes: 0,
+      overtimeMinutes: 0,
+      status: 'ABSENT' as const,
+      notes: 'Seeded absent record',
+    },
+    {
+      employeeId: emp5.id,
+      checkIn: new Date('2026-09-04T10:00:00.000Z'),
+      checkOut: new Date('2026-09-04T18:00:00.000Z'),
+      workedMinutes: 420,
+      overtimeMinutes: 0,
+      status: 'PRESENT' as const,
+    },
+  ];
+
+  for (const record of attendanceRecords) {
+    const { employeeId, ...attendanceData } = record;
+    await prisma.attendance.upsert({
+      where: { employeeId_workDate: { employeeId, workDate } },
+      update: attendanceData,
+      create: { employeeId, workDate, ...attendanceData },
+    });
+  }
+
   console.log('');
   console.log('📧 Login Credentials:');
   console.log('   Admin:      admin@peoplepay360.com / admin123');
