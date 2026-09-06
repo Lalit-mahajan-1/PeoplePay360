@@ -262,8 +262,11 @@ export class PayrollService {
     const rules = payrun.salaryStructure.rules;
     const allWarnings: PayrollWarningInput[] = [];
 
-    // Delete existing payslips & warnings if recomputing
+    // Delete existing payslips, deliveries & warnings if recomputing
     await prisma.payslipLine.deleteMany({
+      where: { payslip: { payrunId } },
+    });
+    await prisma.payslipDelivery.deleteMany({
       where: { payslip: { payrunId } },
     });
     await prisma.payslip.deleteMany({ where: { payrunId } });

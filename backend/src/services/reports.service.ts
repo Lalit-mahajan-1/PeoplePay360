@@ -592,42 +592,44 @@ export class ReportsService {
 
     if (!payrun) throw { status: 404, message: 'Payrun not found' };
 
-    let sent = 0;
-    let failed = 0;
+    const results = await Promise.all(
+      payrun.payslips.map(async (payslip) => {
+        try {
+          const html = await this.generatePayslipHTML(payslip.id);
+          const periodStr = `${payrun.periodStart.toISOString().slice(0, 10)} to ${payrun.periodEnd.toISOString().slice(0, 10)}`;
 
-    for (const payslip of payrun.payslips) {
-      try {
-        const html = await this.generatePayslipHTML(payslip.id);
-        const periodStr = `${payrun.periodStart.toISOString().slice(0, 10)} to ${payrun.periodEnd.toISOString().slice(0, 10)}`;
-        
-        await emailService.sendPayslipEmail({
-          to: payslip.employee.email,
-          employeeName: `${payslip.employee.firstName} ${payslip.employee.lastName}`,
-          employeeCode: payslip.employee.employeeCode,
-          periodName: periodStr,
-          htmlContent: html,
-        });
+          await emailService.sendPayslipEmail({
+            to: payslip.employee.email,
+            employeeName: `${payslip.employee.firstName} ${payslip.employee.lastName}`,
+            employeeCode: payslip.employee.employeeCode,
+            periodName: periodStr,
+            htmlContent: html,
+          });
 
-        await prisma.payslipDelivery.create({
-          data: {
-            payslipId: payslip.id,
-            recipientEmail: payslip.employee.email,
-            status: 'SENT',
-          },
-        });
-        sent++;
-      } catch (err) {
-        console.error(`Failed to mail payslip ${payslip.id} to ${payslip.employee.email}:`, err);
-        await prisma.payslipDelivery.create({
-          data: {
-            payslipId: payslip.id,
-            recipientEmail: payslip.employee.email,
-            status: 'FAILED',
-          },
-        });
-        failed++;
-      }
-    }
+          await prisma.payslipDelivery.create({
+            data: {
+              payslipId: payslip.id,
+              recipientEmail: payslip.employee.email,
+              status: 'SENT',
+            },
+          });
+          return { success: true };
+        } catch (err) {
+          console.error(`Failed to mail payslip ${payslip.id} to ${payslip.employee.email}:`, err);
+          await prisma.payslipDelivery.create({
+            data: {
+              payslipId: payslip.id,
+              recipientEmail: payslip.employee.email,
+              status: 'FAILED',
+            },
+          });
+          return { success: false };
+        }
+      })
+    );
+
+    const sent = results.filter((r) => r.success).length;
+    const failed = results.filter((r) => !r.success).length;
 
     await createAuditLog({
       action: 'SEND_PAYSLIPS',

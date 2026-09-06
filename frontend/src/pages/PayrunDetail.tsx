@@ -36,7 +36,7 @@ export default function PayrunDetail() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { hasRole } = useAuth();
-    const canManagePayment = hasRole(['ADMIN', 'HR_PAYROLL_MANAGER']);
+    const canManagePayment = hasRole(['ADMIN', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER']);
 
     const [payrun, setPayrun] = useState<any>(null);
     const [loading, setLoading] = useState(true);
