@@ -578,6 +578,7 @@ export class ReportsService {
    */
   async emailPayslipsWithNodemailer(payrunId: string, authUser: AuthUser) {
     const { emailService } = await import('./email.service');
+    const { pdfGeneratorService } = await import('./pdf-generator.service');
 
     const payrun = await prisma.payrun.findUnique({
       where: { id: payrunId },
@@ -596,6 +597,7 @@ export class ReportsService {
       payrun.payslips.map(async (payslip) => {
         try {
           const html = await this.generatePayslipHTML(payslip.id);
+          const pdfBuffer = await pdfGeneratorService.generatePayslipPDFBuffer(payslip.id);
           const periodStr = `${payrun.periodStart.toISOString().slice(0, 10)} to ${payrun.periodEnd.toISOString().slice(0, 10)}`;
 
           await emailService.sendPayslipEmail({
@@ -604,6 +606,7 @@ export class ReportsService {
             employeeCode: payslip.employee.employeeCode,
             periodName: periodStr,
             htmlContent: html,
+            pdfBuffer: pdfBuffer,
           });
 
           await prisma.payslipDelivery.create({
@@ -615,7 +618,7 @@ export class ReportsService {
           });
           return { success: true };
         } catch (err) {
-          console.error(`Failed to mail payslip ${payslip.id} to ${payslip.employee.email}:`, err);
+          console.error(`Failed to mail PDF payslip ${payslip.id} to ${payslip.employee.email}:`, err);
           await prisma.payslipDelivery.create({
             data: {
               payslipId: payslip.id,
@@ -635,7 +638,7 @@ export class ReportsService {
       action: 'SEND_PAYSLIPS',
       module: 'REPORTS',
       recordId: payrunId,
-      details: `Mailed ${sent} payslip emails via Nodemailer (${failed} failed) for payrun "${payrun.name}"`,
+      details: `Mailed ${sent} PDF payslip emails via Nodemailer (${failed} failed) for payrun "${payrun.name}"`,
       userId: authUser.userId,
     });
 

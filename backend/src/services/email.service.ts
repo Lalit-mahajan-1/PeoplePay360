@@ -34,7 +34,7 @@ export class EmailService {
   }
 
   /**
-   * Send a payslip email to an employee with embedded HTML & attachment.
+   * Send a payslip email to an employee with embedded HTML & PDF attachment.
    */
   async sendPayslipEmail(options: {
     to: string;
@@ -42,35 +42,49 @@ export class EmailService {
     employeeCode: string;
     periodName: string;
     htmlContent: string;
+    pdfBuffer?: Buffer;
   }) {
-    const { to, employeeName, employeeCode, periodName, htmlContent } = options;
+    const { to, employeeName, employeeCode, periodName, htmlContent, pdfBuffer } = options;
 
     const smtpUser = process.env.SMTP_USER || 'xyzclg28@gmail.com';
     const fromName = process.env.SMTP_FROM_NAME || 'PeoplePay360 Payroll';
     const fromAddress = `"${fromName}" <${smtpUser}>`;
 
-    // Target email address - if dummy, demo or invalid domain, send to admin/SMTP user so test mails deliver cleanly!
+    // Target email address handling
     let targetEmail = to;
-    if (!targetEmail || targetEmail.includes('@peoplepay360.com') || targetEmail.includes('@example.com') || targetEmail.includes('@test.com') || !targetEmail.includes('.')) {
-      console.log(`[EmailService] Redirecting demo/test email (${to}) to SMTP user inbox (${smtpUser})`);
+    if (!targetEmail || !targetEmail.includes('@') || !targetEmail.includes('.')) {
       targetEmail = smtpUser;
+    } else if (process.env.SMTP_OVERRIDE_EMAIL) {
+      targetEmail = process.env.SMTP_OVERRIDE_EMAIL;
+    } else if (targetEmail.includes('@peoplepay360.com') || targetEmail.includes('@example.com')) {
+      console.log(`[EmailService] Redirecting demo email address (${to}) to active SMTP user inbox (${smtpUser})`);
+      targetEmail = smtpUser;
+    }
+
+    const attachments: any[] = [];
+    if (pdfBuffer) {
+      attachments.push({
+        filename: `Payslip_${employeeCode}_${periodName.replace(/\s+/g, '_')}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      });
+    } else {
+      attachments.push({
+        filename: `Payslip_${employeeCode}_${periodName.replace(/\s+/g, '_')}.html`,
+        content: htmlContent,
+        contentType: 'text/html',
+      });
     }
 
     const info = await this.transporter.sendMail({
       from: fromAddress,
       to: targetEmail,
-      subject: `Official Payslip Statement - ${periodName} (${employeeCode})`,
+      subject: `Official Payslip Statement - ${employeeName} (${employeeCode})`,
       html: htmlContent,
-      attachments: [
-        {
-          filename: `Payslip_${employeeCode}_${periodName.replace(/\s+/g, '_')}.html`,
-          content: htmlContent,
-          contentType: 'text/html',
-        },
-      ],
+      attachments,
     });
 
-    console.log(`[EmailService] Payslip email sent to ${targetEmail} (Employee: ${employeeName}):`, (info as any).messageId || 'Queued/Delivered');
+    console.log(`[EmailService] Sent PDF payslip email for ${employeeName} (${employeeCode}) to ${targetEmail}:`, (info as any).messageId || 'Queued/Delivered');
     return info;
   }
 }
