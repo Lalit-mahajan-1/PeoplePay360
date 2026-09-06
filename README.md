@@ -2,6 +2,7 @@
 
 > **An end-to-end operational platform connecting Employee Management, Working Schedules, Daily Attendance, Time Off Allocations, and Automated Payroll Processing.**
 
+VIDEO DRIVE LINK:https://drive.google.com/drive/folders/1IZZKI5vy4hJKF2JAF9snHsFn-ZBkhp-Z?usp=drive_link
 ---
 
 ## OVERVIEW (INTRODUCTION AND SUMMARY)
