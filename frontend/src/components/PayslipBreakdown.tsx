@@ -72,8 +72,8 @@ export default function PayslipBreakdown({ payslip, onClose }: PayslipBreakdownP
     const lines: PayslipLine[] = payslip.lines || [];
     const sortedLines = [...lines].sort((a, b) => a.sequence - b.sequence);
 
-    const earningsLines = sortedLines.filter((l) => ['BASIC', 'ALLOWANCE'].includes(l.category));
-    const deductionLines = sortedLines.filter((l) => l.category === 'DEDUCTION');
+    const earningsLines = sortedLines.filter((l) => ['BASIC', 'ALLOWANCE'].includes(l.category?.toUpperCase()));
+    const deductionLines = sortedLines.filter((l) => ['DEDUCTION', 'DEDUCTIONS', 'TAX'].includes(l.category?.toUpperCase()));
 
     const basicTotal = earningsLines
         .filter((l) => l.category === 'BASIC')

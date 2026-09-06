@@ -1,1 +1,32 @@
 @import "tailwindcss";
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide overlay backdrops, buttons, toasts, navbars */
+  nav, header, footer, button, .toaster, [role="status"], .no-print {
+    display: none !important;
+  }
+
+  /* Expand payslip breakdown modal to full printable height */
+  #payslip-breakdown-card {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    position: static !important;
+  }
+
+  .overflow-y-auto {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+}
